@@ -2,90 +2,88 @@
 
 Aplicación móvil para conductores, que incluye funcionalidades de inicio de sesión, registro, manejo de vehículos y ofertas, integración con notificaciones y servicios de ubicación en tiempo real.
 
+##
 ## Estructura del Proyecto
 
 **/lib**
 
   **/config**
   
-    - firebase_options.dart
+   - firebase_options.dart
     
   **/model**
   
-    - Agricultor.dart
+   - Agricultor.dart
     
-    - CargaOferta.dart
+   - CargaOferta.dart
     
-    - CargaPedido.dart
+   - CargaPedido.dart
     
-    - Categoria.dart
+   - Categoria.dart
     
-    - cliente.dart
+   - cliente.dart
     
-    - Conductor.dart
+   - Conductor.dart
     
-    - Moneda.dart
+   - Moneda.dart
     
-    - Oferta.dart
+   - Oferta.dart
     
-    - OfertaDetalle.dart
+   - OfertaDetalle.dart
     
-    - Pedido.dart
+   - Pedido.dart
     
-    - PedidoDetalle.dart
+   - PedidoDetalle.dart
     
-    - Produccion.dart
+   - Produccion.dart
     
-    - Producto.dart
+   - Producto.dart
     
-    - RutaCargaOferta.dart
+   - RutaCargaOferta.dart
     
-    - RutaCargaPedido.dart
+   - RutaCargaPedido.dart
     
-    - RutaOferta.dart
+   - RutaOferta.dart
     
-    - RutaPedido.dart
+   - RutaPedido.dart
     
-    - Temporada.dart
+   - Temporada.dart
     
-    - Terreno.dart
+   - Terreno.dart
     
-    - Transporte.dart
+   - Transporte.dart
     
-    - UnidadMedida.dart
+   - UnidadMedida.dart
     
   **/notifications**
   
-    - notification.dart
+   - notification.dart
     
   **/screen**
   
-    - home_screen.dart
+   - home_screen.dart
     
-    - loginscreen.dart
-
+   - loginscreen.dart
+   - 
+   - PedidosOfertasScreen.dart
     
-    - PedidosOfertasScreen.dart
+   - register_transportista_screen.dart
     
-    - register_transportista_screen.dart
+   - RegistrarVeiculosScreen.dart
     
-    - RegistrarVeiculosScreen.dart
-    
-    - VehiculosScreen.dart
+   - VehiculosScreen.dart
     
   **/services**
   
-    - api_service.dart
+   - api_service.dart
     
-    - ConductorProvider.dart
+   - ConductorProvider.dart
     
   **/themes**
   
-    - theme.dart
-    
-  - main.dart
-
-
+   - theme.dart
+   - main.dart
+##
 
 ## Configuración de Firebase
 
