@@ -4,7 +4,47 @@ Aplicación móvil para conductores, que incluye funcionalidades de inicio de se
 
 ## Estructura del Proyecto
 
-conductor_app/ ├── lib/ │ ├── main.dart # Punto de entrada de la aplicación │ ├── firebase_options.dart # Configuración de Firebase │ ├── models/ # Modelos de datos │ │ ├── Agricultor.dart │ │ ├── CargaOferta.dart │ │ ├── Conductor.dart │ │ ├── Pedido.dart │ │ └── (...otros modelos) │ ├── notifications/ # Gestión de notificaciones │ │ └── notification.dart # Servicio de notificaciones │ ├── screens/ # Pantallas principales │ │ ├── home_screen.dart # Pantalla principal │ │ ├── loginscreen.dart # Pantalla de inicio de sesión │ │ ├── PedidosOfertasScreen.dart # Pantalla de pedidos y ofertas │ │ ├── register_transportista_screen.dart # Pantalla de registro │ │ ├── RegistrarVeiculosScreen.dart # Pantalla de registro de vehículos │ │ └── VehiculosScreen.dart # Pantalla de gestión de vehículos │ ├── services/ # Servicios auxiliares │ │ ├── api_service.dart # Cliente API │ │ └── ConductorProvider.dart # Manejo del estado global │ ├── themes/ # Temas de la aplicación │ └── theme.dart # Definición de tema ├── pubspec.yaml # Archivo de configuración de dependencias
+**/lib**
+  **/config**
+    - firebase_options.dart
+  **/model**
+    - Agricultor.dart
+    - CargaOferta.dart
+    - CargaPedido.dart
+    - Categoria.dart
+    - cliente.dart
+    - Conductor.dart
+    - Moneda.dart
+    - Oferta.dart
+    - OfertaDetalle.dart
+    - Pedido.dart
+    - PedidoDetalle.dart
+    - Produccion.dart
+    - Producto.dart
+    - RutaCargaOferta.dart
+    - RutaCargaPedido.dart
+    - RutaOferta.dart
+    - RutaPedido.dart
+    - Temporada.dart
+    - Terreno.dart
+    - Transporte.dart
+    - UnidadMedida.dart
+  **/notifications**
+    - notification.dart
+  **/screen**
+    - home_screen.dart
+    - loginscreen.dart
+    - PedidosOfertasScreen.dart
+    - register_transportista_screen.dart
+    - RegistrarVeiculosScreen.dart
+    - VehiculosScreen.dart
+  **/services**
+    - api_service.dart
+    - ConductorProvider.dart
+  **/themes**
+    - theme.dart
+  - main.dart
+
 
 
 ## Configuración de Firebase
