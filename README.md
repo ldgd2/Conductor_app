@@ -5,44 +5,84 @@ Aplicación móvil para conductores, que incluye funcionalidades de inicio de se
 ## Estructura del Proyecto
 
 **/lib**
+
   **/config**
+  
     - firebase_options.dart
+    
   **/model**
+  
     - Agricultor.dart
+    
     - CargaOferta.dart
+    
     - CargaPedido.dart
+    
     - Categoria.dart
+    
     - cliente.dart
+    
     - Conductor.dart
+    
     - Moneda.dart
+    
     - Oferta.dart
+    
     - OfertaDetalle.dart
+    
     - Pedido.dart
+    
     - PedidoDetalle.dart
+    
     - Produccion.dart
+    
     - Producto.dart
+    
     - RutaCargaOferta.dart
+    
     - RutaCargaPedido.dart
+    
     - RutaOferta.dart
+    
     - RutaPedido.dart
+    
     - Temporada.dart
+    
     - Terreno.dart
+    
     - Transporte.dart
+    
     - UnidadMedida.dart
+    
   **/notifications**
+  
     - notification.dart
+    
   **/screen**
+  
     - home_screen.dart
+    
     - loginscreen.dart
+
+    
     - PedidosOfertasScreen.dart
+    
     - register_transportista_screen.dart
+    
     - RegistrarVeiculosScreen.dart
+    
     - VehiculosScreen.dart
+    
   **/services**
+  
     - api_service.dart
+    
     - ConductorProvider.dart
+    
   **/themes**
+  
     - theme.dart
+    
   - main.dart
 
 
