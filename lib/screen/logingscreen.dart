@@ -1,18 +1,16 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:provider/provider.dart'; // Importar Provider
+import 'package:provider/provider.dart';
 import 'package:conductor_app/services/api_service.dart';
 import 'package:conductor_app/screen/register_transportista_screen.dart';
 import 'package:conductor_app/screen/home_screen.dart';
 import 'package:conductor_app/themes/theme.dart';
 import 'dart:convert';
 import 'package:conductor_app/config/config.dart';
+import 'package:conductor_app/model/statusModel.dart'; // Importar StatusModel
 import 'package:conductor_app/services/ConductorProvider.dart'; // Importar ConductorProvider
 import 'package:http/http.dart' as http;
-
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -25,11 +23,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final ApiService _apiService = ApiService();
   bool _isLoading = false;
-
-
-
-
-
 
   // Obtener el token FCM
   Future<String?> _getFCMToken() async {
@@ -44,60 +37,19 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // Método para iniciar sesión
-  Future<void> _login() async {
-    final conductorProvider = Provider.of<ConductorProvider>(context, listen: false);
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final response = await _apiService.getAllConductores();
-
-      if (response.statusCode == 200) {
-        final List conductores = List.from(jsonDecode(response.body));
-        final conductor = conductores.firstWhere(
-          (c) => c['email'] == _emailController.text.trim(),
-          orElse: () => null,
-        );
-
-        if (conductor != null) {
-          final conductorId = conductor['id'];
-          final conductorNombre = conductor['nombre'];
-          debugPrint("Conductor encontrado: $conductorId");
-
-          final token = await _getFCMToken();
-          if (token != null) {
-            // Actualizar estado global en el Provider
-            conductorProvider.setConductor(conductorId, conductorNombre, token);
-
-            // Navegar al HomeScreen
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const HomeScreen()),
-            );
-          } else {
-            _showSnackBar("No se pudo obtener el token FCM.");
-          }
-        } else {
-          _showSnackBar("Correo electrónico no encontrado.");
-        }
-      } else {
-        _showSnackBar("Error en el inicio de sesión. Intente nuevamente.");
-      }
-    } catch (e) {
-      _showSnackBar("Error de red. Verifique su conexión.");
-      debugPrint("Excepción al iniciar sesión: $e");
-    }
-
-    setState(() {
-      _isLoading = false;
-    });
+  // Guardar sesión localmente
+  Future<void> _saveSession(int conductorId, String nombre, String email, String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('conductorId', conductorId);
+    await prefs.setString('nombre', nombre);
+    await prefs.setString('email', email);
+    await prefs.setString('token', token);
+    debugPrint("Sesión guardada localmente: Conductor ID $conductorId, Nombre $nombre");
   }
 
+ // Enviar estado de sesión al servidor
 Future<void> _sendSessionStatus(int conductorId, String token, bool isActive) async {
-  const url = notificationUrl; // Asegúrate de que esta URL esté bien configurada.
+  const url = notificationUrl;
 
   final body = jsonEncode({
     "conductorId": conductorId,
@@ -113,7 +65,7 @@ Future<void> _sendSessionStatus(int conductorId, String token, bool isActive) as
     );
 
     if (response.statusCode == 200) {
-      debugPrint("Estado de sesión enviado correctamente para conductorId $conductorId.");
+      debugPrint("Estado de sesión enviado correctamente: $isActive para Conductor ID: $conductorId");
     } else {
       debugPrint("Error al enviar estado de sesión: ${response.body}");
     }
@@ -122,6 +74,97 @@ Future<void> _sendSessionStatus(int conductorId, String token, bool isActive) as
   }
 }
 
+// Método para iniciar sesión
+Future<void> _login() async {
+  final statusModel = Provider.of<StatusModel>(context, listen: false);
+  final conductorProvider = Provider.of<ConductorProvider>(context, listen: false);
+
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    final response = await _apiService.getAllConductores();
+
+    if (response.statusCode == 200) {
+      final List conductores = List.from(jsonDecode(response.body));
+      final conductor = conductores.firstWhere(
+        (c) => c['email'] == _emailController.text.trim(),
+        orElse: () => null,
+      );
+
+      if (conductor != null) {
+        final conductorId = conductor['id'];
+        final nombre = conductor['nombre'];
+        final email = conductor['email'];
+        debugPrint("Conductor encontrado: $conductorId");
+
+        final token = await _getFCMToken();
+        if (token != null) {
+          // Guardar sesión localmente
+          await _saveSession(conductorId, nombre, email, token);
+
+          // Actualizar estado en StatusModel
+          statusModel.setStatus(conductorId, token, true);
+
+          // Actualizar información en ConductorProvider
+          conductorProvider.setConductor(conductorId, nombre, email);
+
+          // Enviar estado de sesión activa al servidor
+          await _sendSessionStatus(conductorId, token, true);
+
+          // Navegar al HomeScreen
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        } else {
+          _showSnackBar("No se pudo obtener el token FCM.");
+        }
+      } else {
+        _showSnackBar("Correo electrónico no encontrado.");
+      }
+    } else {
+      _showSnackBar("Error en el inicio de sesión. Intente nuevamente.");
+    }
+  } catch (e) {
+    _showSnackBar("Error de red. Verifique su conexión.");
+    debugPrint("Excepción al iniciar sesión: $e");
+  }
+
+  setState(() {
+    _isLoading = false;
+  });
+}
+
+
+  // Validar sesión activa al iniciar la aplicación
+  Future<void> _autoLogin() async {
+    final statusModel = Provider.of<StatusModel>(context, listen: false);
+    final conductorProvider = Provider.of<ConductorProvider>(context, listen: false);
+
+    final prefs = await SharedPreferences.getInstance();
+    final conductorId = prefs.getInt('conductorId');
+    final nombre = prefs.getString('nombre');
+    final email = prefs.getString('email');
+    final token = prefs.getString('token');
+
+    if (conductorId != null && token != null) {
+      debugPrint("Sesión encontrada: $conductorId, Nombre: $nombre");
+
+      // Actualizar estado en StatusModel
+      statusModel.setStatus(conductorId, token, true);
+
+      // Actualizar información en ConductorProvider
+      conductorProvider.setConductor(conductorId, nombre ?? '', email ?? '');
+
+      // Navegar al HomeScreen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    }
+  }
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -134,32 +177,6 @@ Future<void> _sendSessionStatus(int conductorId, String token, bool isActive) as
     super.initState();
     _autoLogin();
   }
-
-  // Iniciar sesión automáticamente si hay una sesión guardada
-  Future<void> _autoLogin() async {
-  final conductorProvider = Provider.of<ConductorProvider>(context, listen: false);
-  final prefs = await SharedPreferences.getInstance();
-  final conductorId = prefs.getInt('conductorId');
-  final conductorNombre = prefs.getString('nombre');
-  final token = prefs.getString('token');
-
-  if (conductorId != null && token != null) {
-    debugPrint("Sesión encontrada: $conductorId");
-
-    // Actualizar estado en el Provider
-    conductorProvider.setConductor(conductorId, conductorNombre ?? 'Conductor', token);
-
-    // Enviar estado de sesión al backend
-    await _sendSessionStatus(conductorId, token, true);
-
-    // Redirigir a HomeScreen
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
-    );
-  }
-}
-
 
   @override
   Widget build(BuildContext context) {

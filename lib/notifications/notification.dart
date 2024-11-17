@@ -1,81 +1,80 @@
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:convert';
 import 'package:conductor_app/config/config.dart';
-import 'package:http/http.dart' as http; // Importa la librería HTTP
+import 'package:http/http.dart' as http;
+import 'package:conductor_app/model/NewRoutesNotifier.dart';
+import 'package:provider/provider.dart';
+
 class NotificationService {
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications =
-      FlutterLocalNotificationsPlugin();
+  late BuildContext _context;
+
+  NotificationService(BuildContext context) {
+    _context = context;
+  }
 
   Future<void> init(int conductorId) async {
-    // Solicitar permisos para notificaciones
-    await _messaging.requestPermission();
-
-    // Inicializar el canal de notificaciones locales
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings();
-    const initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
+    // Inicializar Awesome Notifications
+    await AwesomeNotifications().initialize(
+      null, // Usa el ícono por defecto de la app
+      [
+        NotificationChannel(
+          channelKey: 'main_channel',
+          channelName: 'Main Channel',
+          channelDescription: 'Canal principal para notificaciones',
+          defaultColor: const Color(0xFF9D50DD),
+          ledColor: Colors.white,
+          importance: NotificationImportance.High,
+          playSound: true,
+          onlyAlertOnce: true,
+        ),
+      ],
     );
 
-    await _localNotifications.initialize(initSettings,
-        onDidReceiveNotificationResponse: _onNotificationResponse);
+    // Pedir permisos de notificaciones
+    bool isAllowed = await AwesomeNotifications().isNotificationAllowed();
+    if (!isAllowed) {
+      await AwesomeNotifications().requestPermissionToSendNotifications();
+    }
 
-    // Obtener el token de FCM
+    // Obtener token de FCM
     String? token = await _messaging.getToken();
     print("FCM Token: $token");
 
-    // Envía el token al servidor
+    // Enviar token al servidor
     if (token != null) {
       await _sendTokenToServer(conductorId, token, true);
     }
 
-    // Configurar el manejo de notificaciones en primer plano
+    // Configurar el manejo de notificaciones de Firebase
     FirebaseMessaging.onMessage.listen((message) {
       _showNotification(message);
     });
 
-    // Manejar clics en notificaciones
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      print("Notificación abierta: ${message.data}");
+      _navigateToPedidosOfertas(_context); // Redirigir al abrir la notificación
     });
+
+    // Configurar el listener de acciones de Awesome Notifications
+    AwesomeNotifications().setListeners(
+      onActionReceivedMethod: NotificationService.onActionReceivedMethod,
+    );
   }
 
   Future<void> _showNotification(RemoteMessage message) async {
     final notification = message.notification;
     if (notification != null) {
-      const androidDetails = AndroidNotificationDetails(
-        'main_channel',
-        'Main Channel',
-        importance: Importance.max,
-        priority: Priority.high,
-        showWhen: true,
+      await AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          id: message.hashCode,
+          channelKey: 'main_channel',
+          title: notification.title ?? 'Nueva notificación',
+          body: notification.body ?? 'Tienes una nueva notificación.',
+          payload: message.data.map((key, value) => MapEntry(key, value.toString())),
+        ),
       );
-
-      const iosDetails = DarwinNotificationDetails();
-      const platformDetails = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
-
-      await _localNotifications.show(
-        message.notification.hashCode,
-        notification.title,
-        notification.body,
-        platformDetails,
-        payload: jsonEncode(message.data),
-      );
-    }
-  }
-
-  void _onNotificationResponse(NotificationResponse response) {
-    final payload = response.payload;
-    if (payload != null) {
-      final data = jsonDecode(payload);
-      print("Datos de la notificación: $data");
-      // Aquí puedes manejar la lógica de "Aceptar" o "Cancelar"
     }
   }
 
@@ -111,4 +110,28 @@ class NotificationService {
       await _sendTokenToServer(conductorId, token, false);
     }
   }
+
+  static void _navigateToPedidosOfertas(BuildContext context) {
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      '/route',
+      (route) => false, // Cierra cualquier ruta anterior
+    );
+  }
+
+  /// Método estático para manejar las acciones de los botones
+  @pragma('vm:entry-point')
+  static Future<void> onActionReceivedMethod(ReceivedAction receivedAction) async {
+    // Este método se ejecuta al interactuar con una notificación
+    // Puedes usar `receivedAction.payload` para manejar datos específicos
+
+    final context = AwesomeNotifications().currentContext;
+    if (context != null) {
+      _navigateToPedidosOfertas(context);
+    }
+  }
+}
+
+extension on AwesomeNotifications {
+   get currentContext => null;
 }
