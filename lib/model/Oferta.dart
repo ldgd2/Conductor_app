@@ -5,7 +5,6 @@ class Oferta {
   final int idProduccion;
   final DateTime fechaCreacion;
   final DateTime fechaExpiracion;
-  final String estado;
 
   // Constructor
   Oferta({
@@ -13,7 +12,6 @@ class Oferta {
     required this.idProduccion,
     required this.fechaCreacion,
     required this.fechaExpiracion,
-    required this.estado,
   });
 
   // Método para crear un objeto Oferta a partir de JSON
@@ -23,7 +21,6 @@ class Oferta {
       idProduccion: json['id_produccion'],
       fechaCreacion: DateTime.parse(json['fecha_creacion']),
       fechaExpiracion: DateTime.parse(json['fecha_expiracion']),
-      estado: json['estado'],
     );
   }
 
@@ -33,7 +30,6 @@ class Oferta {
       'id_produccion': idProduccion,
       'fecha_creacion': fechaCreacion.toIso8601String(),
       'fecha_expiracion': fechaExpiracion.toIso8601String(),
-      'estado': estado,
     };
   }
 }

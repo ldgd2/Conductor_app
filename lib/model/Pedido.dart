@@ -6,7 +6,7 @@ class Pedido {
   final DateTime fechaEntrega;
   final double ubicacionLatitud;
   final double ubicacionLongitud;
-  final String estado;
+
 
   // Constructor
   Pedido({
@@ -15,7 +15,7 @@ class Pedido {
     required this.fechaEntrega,
     required this.ubicacionLatitud,
     required this.ubicacionLongitud,
-    required this.estado,
+
   });
 
   // Método para crear un objeto Pedido a partir de JSON
@@ -26,7 +26,7 @@ class Pedido {
       fechaEntrega: DateTime.parse(json['fecha_entrega']),
       ubicacionLatitud: (json['ubicacion_latitud'] as num).toDouble(),
       ubicacionLongitud: (json['ubicacion_longitud'] as num).toDouble(),
-      estado: json['estado'],
+     
     );
   }
 
@@ -37,7 +37,6 @@ class Pedido {
       'fecha_entrega': fechaEntrega.toIso8601String(),
       'ubicacion_latitud': ubicacionLatitud,
       'ubicacion_longitud': ubicacionLongitud,
-      'estado': estado,
     };
   }
 }

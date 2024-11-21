@@ -5,6 +5,7 @@ class Conductor {
   final String nombre;
   final String apellido;
   final String carnet;
+  final String tokendevice;
   final String licenciaConducir;
   final DateTime fechaNacimiento;
   final String direccion;
@@ -20,6 +21,7 @@ class Conductor {
     required this.nombre,
     required this.apellido,
     required this.carnet,
+    required this.tokendevice,
     required this.licenciaConducir,
     required this.fechaNacimiento,
     required this.direccion,
@@ -37,6 +39,7 @@ class Conductor {
       nombre: json['nombre'],
       apellido: json['apellido'],
       carnet: json['carnet'],
+      tokendevice: json['tokendevice'],
       licenciaConducir: json['licencia_conducir'],
       fechaNacimiento: DateTime.parse(json['fecha_nacimiento']),
       direccion: json['direccion'],
@@ -54,6 +57,7 @@ class Conductor {
       'nombre': nombre,
       'apellido': apellido,
       'carnet': carnet,
+      'tokendevice': tokendevice,
       'licencia_conducir': licenciaConducir,
       'fecha_nacimiento': fechaNacimiento.toIso8601String(),
       'direccion': direccion,

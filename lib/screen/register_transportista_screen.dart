@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart' as latLngLib;
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../model/conductor.dart';
 import '../services/api_service.dart';
 
@@ -27,6 +28,7 @@ class _RegisterTransportistaScreenState extends State<RegisterTransportistaScree
   DateTime? _selectedDate;
   latLngLib.LatLng? _selectedLocation;
   String? _direccionSeleccionada;
+  late String _deviceToken;
   bool _mapReady = false;
 
   final ApiService _apiService = ApiService();
@@ -35,6 +37,7 @@ class _RegisterTransportistaScreenState extends State<RegisterTransportistaScree
   void initState() {
     super.initState();
     _requestLocationPermission();
+    _fetchDeviceToken();
   }
 
   Future<void> _requestLocationPermission() async {
@@ -63,6 +66,15 @@ class _RegisterTransportistaScreenState extends State<RegisterTransportistaScree
       setState(() {
         _direccionSeleccionada = "${placemarks.first.street}, ${placemarks.first.locality}, ${placemarks.first.country}";
       });
+    }
+  }
+
+  Future<void> _fetchDeviceToken() async {
+    try {
+      _deviceToken = (await FirebaseMessaging.instance.getToken())!;
+      print("Token del dispositivo obtenido: $_deviceToken");
+    } catch (e) {
+      print("Error al obtener el token del dispositivo: $e");
     }
   }
 
@@ -148,7 +160,6 @@ class _RegisterTransportistaScreenState extends State<RegisterTransportistaScree
                       ),
                     )
                   : const Center(child: CircularProgressIndicator()),
-
               ListTile(
                 title: const Text('Dirección seleccionada:'),
                 subtitle: Text(_direccionSeleccionada ?? 'Toca el mapa para seleccionar tu ubicación'),
@@ -184,13 +195,18 @@ class _RegisterTransportistaScreenState extends State<RegisterTransportistaScree
       ubicacionLatitud: _selectedLocation!.latitude,
       ubicacionLongitud: _selectedLocation!.longitude,
       estado: "activo",
+      tokendevice: _deviceToken,
     );
 
-    final response = await _apiService.createConductor(conductor.toJson());
-    if (response.statusCode == 201) {
-      _showSnackBar(context, "Conductor registrado correctamente.", Colors.green);
-    } else {
-      _showSnackBar(context, "Error: ${response.body}", Colors.red);
+    try {
+      final response = await _apiService.createConductor(conductor.toJson());
+      if (response.statusCode == 201) {
+        _showSnackBar(context, "Conductor registrado correctamente.", Colors.green);
+      } else {
+        _showSnackBar(context, "Error: ${response.body}", Colors.red);
+      }
+    } catch (e) {
+      _showSnackBar(context, "Error al registrar conductor: $e", Colors.red);
     }
   }
 

@@ -9,6 +9,7 @@ class RutaCargaOferta {
   final String estado;
   final double distancia;
 
+
   // Constructor
   RutaCargaOferta({
     this.id,

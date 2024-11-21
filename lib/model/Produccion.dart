@@ -10,7 +10,7 @@ class Produccion {
   final int cantidad;
   final DateTime fechaCosecha;
   final DateTime fechaExpiracion;
-  final String estado;
+ 
 
   // Constructor
   Produccion({
@@ -23,7 +23,7 @@ class Produccion {
     required this.cantidad,
     required this.fechaCosecha,
     required this.fechaExpiracion,
-    required this.estado,
+  
   });
 
   // Método para crear un objeto Produccion a partir de JSON
@@ -38,7 +38,7 @@ class Produccion {
       cantidad: json['cantidad'],
       fechaCosecha: DateTime.parse(json['fecha_cosecha']),
       fechaExpiracion: DateTime.parse(json['fecha_expiracion']),
-      estado: json['estado'],
+     
     );
   }
 
@@ -53,7 +53,7 @@ class Produccion {
       'cantidad': cantidad,
       'fecha_cosecha': fechaCosecha.toIso8601String(),
       'fecha_expiracion': fechaExpiracion.toIso8601String(),
-      'estado': estado,
+      
     };
   }
 }

@@ -6,7 +6,7 @@ class PedidoDetalle {
   final int idProducto;
   final int idUnidadMedida;
   final int cantidad;
-  final int cantidadOfertada;
+  
 
   // Constructor
   PedidoDetalle({
@@ -15,7 +15,7 @@ class PedidoDetalle {
     required this.idProducto,
     required this.idUnidadMedida,
     required this.cantidad,
-    required this.cantidadOfertada,
+   
   });
 
   // Método para crear un objeto PedidoDetalle a partir de JSON
@@ -26,7 +26,7 @@ class PedidoDetalle {
       idProducto: json['id_producto'],
       idUnidadMedida: json['id_unidadmedida'],
       cantidad: json['cantidad'],
-      cantidadOfertada: json['cantidad_ofertada'],
+      
     );
   }
 
@@ -37,7 +37,6 @@ class PedidoDetalle {
       'id_producto': idProducto,
       'id_unidadmedida': idUnidadMedida,
       'cantidad': cantidad,
-      'cantidad_ofertada': cantidadOfertada,
     };
   }
 }

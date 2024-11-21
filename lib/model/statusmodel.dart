@@ -1,25 +1,26 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
-class StatusModel with ChangeNotifier {
+class StatusModel extends ChangeNotifier {
   int? _conductorId;
   String? _token;
-  bool _isActive = false;
+
+  // Getter para verificar si el usuario está autenticado
+  bool get isAuthenticated => _conductorId != null && _token != null;
 
   int? get conductorId => _conductorId;
   String? get token => _token;
-  bool get isActive => _isActive;
 
-  void setStatus(int conductorId, String token, bool isActive) {
+  // Establecer el estado del usuario
+  void setStatus(int conductorId, String token, bool isAuthenticated) {
     _conductorId = conductorId;
     _token = token;
-    _isActive = isActive;
     notifyListeners();
   }
 
+  // Limpiar el estado al cerrar sesión
   void clearStatus() {
     _conductorId = null;
     _token = null;
-    _isActive = false;
     notifyListeners();
   }
 }

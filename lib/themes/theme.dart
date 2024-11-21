@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 
 class AppThemes {
   // Definición de colores principales
@@ -161,4 +162,62 @@ class AppThemes {
     waitDuration: Duration(milliseconds: 500),
     showDuration: Duration(seconds: 2),
   );
+
+  // ------------------------------
+  // ESTILOS DE NOTIFICACIONES
+  // ------------------------------
+
+  // Canal principal de notificaciones
+  static NotificationChannel notificationChannel = NotificationChannel(
+    channelKey: 'main_channel',
+    channelName: 'Main Channel',
+    channelDescription: 'Canal principal para notificaciones importantes',
+    defaultColor: primaryColor,
+    ledColor: secondaryColor,
+    importance: NotificationImportance.Max,
+    playSound: true,
+    enableLights: true,
+    enableVibration: true,
+  );
+
+  // Notificación con texto expandido
+  static NotificationContent createBigTextNotification(
+      {required String title, required String body}) {
+    return NotificationContent(
+      id: 1,
+      channelKey: 'main_channel',
+      title: title,
+      body: body,
+      notificationLayout: NotificationLayout.BigText,
+      backgroundColor: backgroundColor,
+    );
+  }
+
+  // Notificación con imagen
+  static NotificationContent createImageNotification(
+      {required String title, required String body, required String imageUrl}) {
+    return NotificationContent(
+      id: 2,
+      channelKey: 'main_channel',
+      title: title,
+      body: body,
+      notificationLayout: NotificationLayout.BigPicture,
+      bigPicture: imageUrl,
+      backgroundColor: backgroundColor,
+    );
+  }
+
+  // Notificación con ícono grande
+  static NotificationContent createLargeIconNotification(
+      {required String title, required String body}) {
+    return NotificationContent(
+      id: 3,
+      channelKey: 'main_channel',
+      title: title,
+      body: body,
+      notificationLayout: NotificationLayout.Default,
+      largeIcon: 'resource://drawable/res_app_icon',
+      backgroundColor: backgroundColor,
+    );
+  }
 }

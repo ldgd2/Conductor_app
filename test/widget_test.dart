@@ -1,34 +1,30 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
+import 'package:conductor_app/screen/logingscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:conductor_app/notifications/notification.dart';
 import 'package:conductor_app/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(MyApp(
-      initNotifications: (BuildContext context) async {
-        // Simula una inicialización vacía
-      },
-    ));
+  testWidgets('Verificar que la aplicación carga correctamente', (WidgetTester tester) async {
+    // Inicializar el servicio de notificaciones
+    final notificationService = NotificationService();
+    await notificationService.init();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Inicializar sin notificación inicial
+    final initialNotification = null;
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Construir la aplicación
+    await tester.pumpWidget(
+      MyApp(
+        notificationService: notificationService,
+        initialNotification: initialNotification,
+      ),
+    );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verificar que la aplicación se carga correctamente
+    expect(find.text('Registro de Transportista'), findsOneWidget);
+
+    // Verificar que estamos en la pantalla de inicio de sesión
+    expect(find.byType(LoginScreen), findsOneWidget);
   });
 }

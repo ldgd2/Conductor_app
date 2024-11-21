@@ -11,18 +11,18 @@ class ApiService {
 
   // Métodos genéricos de solicitud
  Future<http.Response> _get(String endpoint) async {
-  try {
-    final url = Uri.parse("$_baseUrl/$endpoint");
-    final response = await http.get(url, headers: _headers);
-    if (response.statusCode == 200) {
-      return response;
-    } else {
-      throw Exception('Failed to load data: ${response.statusCode}');
+    try {
+      final url = Uri.parse("$_baseUrl/$endpoint");
+      final response = await http.get(url, headers: _headers);
+      if (response.statusCode == 200) {
+        return response;
+      } else {
+        throw Exception('Failed to load data: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching data: $e');
     }
-  } catch (e) {
-    throw Exception('Error fetching data: $e');
   }
-}
 
 
   Future<http.Response> _post(String endpoint, Map<String, dynamic> data) async {
@@ -41,12 +41,44 @@ class ApiService {
   }
 
   // 1. ConductorController
-  Future<http.Response> getAllConductores() => _get("conductores");
+Future<List<dynamic>> getAllConductores() async {
+  final response = await _get("conductores");
+  final decodedResponse = jsonDecode(response.body);
+  
+  if (decodedResponse is List<dynamic>) {
+    return decodedResponse;
+  } else if (decodedResponse is Map<String, dynamic>) {
+    // Si la respuesta es un objeto, verifica si contiene una lista
+    if (decodedResponse.containsKey('data') && decodedResponse['data'] is List) {
+      return decodedResponse['data'] as List<dynamic>;
+    } else {
+      throw Exception("La respuesta no contiene una lista válida de conductores.");
+    }
+  } else {
+    throw Exception("Formato inesperado en la respuesta del servidor.");
+  }
+}
+
   Future<http.Response> createConductor(Map<String, dynamic> data) => _post("conductores", data);
   Future<http.Response> getConductorById(int id) => _get("conductores/$id");
   Future<http.Response> updateConductor(int id, Map<String, dynamic> data) => _put("conductores/$id", data);
   Future<http.Response> deleteConductor(int id) => _delete("conductores/$id");
   Future<http.Response> getTransportesByConductor(int id) => _get("conductores/$id/transportes");
+//actualizar token cinductor
+Future<http.Response> updateToken(int conductorId, String token) async {
+  try {
+    final url = Uri.parse("$_baseUrl/conductores/$conductorId");
+    final response = await http.put(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"tokendevice": token}),
+    );
+    return response;
+  } catch (e) {
+    throw Exception("Error actualizando token: $e");
+  }
+}
+
 
   // 2. AgricultorController
   Future<http.Response> getAllAgricultores() => _get("agricultors");

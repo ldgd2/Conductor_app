@@ -10,7 +10,6 @@ class OfertaDetalle {
   final int cantidadFisico;
   final int cantidadComprometido;
   final double precio;
-  final String estado;
 
   // Constructor
   OfertaDetalle({
@@ -23,7 +22,6 @@ class OfertaDetalle {
     required this.cantidadFisico,
     required this.cantidadComprometido,
     required this.precio,
-    required this.estado,
   });
 
   // Método para crear un objeto OfertaDetalle a partir de JSON
@@ -38,7 +36,6 @@ class OfertaDetalle {
       cantidadFisico: json['cantidad_fisico'],
       cantidadComprometido: json['cantidad_comprometido'],
       precio: (json['precio'] as num).toDouble(),
-      estado: json['estado'],
     );
   }
 
@@ -53,7 +50,6 @@ class OfertaDetalle {
       'cantidad_fisico': cantidadFisico,
       'cantidad_comprometido': cantidadComprometido,
       'precio': precio,
-      'estado': estado,
     };
   }
 }

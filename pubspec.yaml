@@ -49,6 +49,7 @@ dependencies:
   firebase_messaging: ^15.1.4
   path_provider: ^2.1.5
   awesome_notifications: ^0.10.0
+  cloud_firestore: ^5.5.0
 
 dev_dependencies:
   flutter_test:
