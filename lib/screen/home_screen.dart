@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:conductor_app/services/ConductorProvider.dart';
 import 'package:conductor_app/model/statusModel.dart';
-import 'package:conductor_app/services/AutoLog.dart';
+//import 'package:conductor_app/services/AutoLog.dart';
 import 'package:conductor_app/services/api_service.dart';
 import 'package:conductor_app/themes/theme.dart';
 import 'package:conductor_app/screen/PedidosOfertasScreen.dart';
@@ -19,7 +19,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   final ApiService _apiService = ApiService();
-  final AutoLogin _autoLogin = AutoLogin(); // Instancia de AutoLog
+ // final AutoLogin _autoLogin = AutoLogin(); // Instancia de AutoLog
   late AnimationController _animationController;
 
   @override
@@ -66,7 +66,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   void _logout() async {
     // Utilizar el método logout desde AutoLogin
-    await _autoLogin.logout(context);
+   // await _autoLogin.logout(context);
   }
 
   void _showError(String message) {

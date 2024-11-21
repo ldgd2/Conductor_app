@@ -12,7 +12,6 @@ import 'package:conductor_app/services/ConductorProvider.dart';
 import 'package:conductor_app/notifications/notification.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:conductor_app/model/NewRoutesNotifier.dart';
-import 'package:conductor_app/services/AutoLog.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -53,7 +52,6 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   final NotificationService notificationService;
   final ReceivedAction? initialNotification;
-  final AutoLogin _autoLogin = AutoLogin(); // Instancia del nuevo sistema de autologin
 
   MyApp({
     super.key,
@@ -67,17 +65,7 @@ class MyApp extends StatelessWidget {
       title: 'Registro de Transportista',
       theme: AppThemes.darkTheme,
       navigatorKey: navigatorKey,
-      home: FutureBuilder(
-        future: _autoLogin.tryAutoLogin(context),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          // Si no hay sesión activa, mostrar la pantalla de login
-          return const LoginScreen();
-        },
-      ),
+      home: const LoginScreen(), // Inicio en la pantalla de Login
       routes: {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),

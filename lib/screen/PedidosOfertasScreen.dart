@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as latLngLib;
 import 'package:conductor_app/model/rutapedido2.dart';
 import 'package:conductor_app/services/api_service.dart';
 import 'package:conductor_app/themes/theme.dart';
+import 'package:provider/provider.dart';
+import 'package:conductor_app/model/statusModel.dart';
 import 'dart:convert';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class RutaPedidosScreen extends StatefulWidget {
-  const RutaPedidosScreen({Key? key}) : super(key: key);
+ final latLngLib.LatLng? notificationCoordinates; // Coordenadas individuales
+  final List<latLngLib.LatLng>? notificationRoute; // Ruta completa
+
+   const RutaPedidosScreen({Key? key, this.notificationCoordinates, this.notificationRoute}) : super(key: key);
 
   @override
   _RutaPedidosScreenState createState() => _RutaPedidosScreenState();
@@ -21,7 +27,19 @@ class _RutaPedidosScreenState extends State<RutaPedidosScreen> {
   @override
   void initState() {
     super.initState();
-    _loadRutasPedido();
+
+    if (widget.notificationRoute != null && widget.notificationRoute!.isNotEmpty) {
+      // Mostrar el mapa directamente si viene una ruta completa de la notificación
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showMapDialog(widget.notificationRoute!);
+      });
+      setState(() {
+        _isLoading = false; // No carga rutas adicionales
+      });
+    } else {
+      // Cargar rutas normalmente si no hay datos de notificaciones
+      _loadRutasPedido();
+    }
   }
 
   Future<void> _loadRutasPedido() async {
@@ -31,18 +49,32 @@ class _RutaPedidosScreenState extends State<RutaPedidosScreen> {
     });
 
     try {
-      final response = await _apiService.getAllRutasPedido();
+      // Obtener el ID del conductor desde el Provider
+      final conductorId = Provider.of<StatusModel>(context, listen: false).conductorId;
+
+      if (conductorId == null) {
+        setState(() {
+          _errorMessage = "ID del conductor no encontrado. Inicie sesión nuevamente.";
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Llamar a la API con el ID del conductor
+      final response = await _apiService.getAllRutasOfertaconductor(conductorId);
+
       if (response.statusCode == 200) {
-        final body = response.body;
-        final List<dynamic> data = jsonDecode(body);
-        if (data is List) {
+        final body = jsonDecode(response.body);
+
+        if (body is Map<String, dynamic> && body.containsKey('data')) {
+          final List<dynamic> data = body['data'];
           setState(() {
             _rutasPedido = data.map((json) => RutaPedido.fromJson(json)).toList();
             _isLoading = false;
           });
         } else {
           setState(() {
-            _errorMessage = "La respuesta no es una lista de rutas. Verifica la API.";
+            _errorMessage = "La respuesta no contiene rutas válidas. Verifica la API.";
             _isLoading = false;
           });
         }
@@ -60,7 +92,7 @@ class _RutaPedidosScreenState extends State<RutaPedidosScreen> {
     }
   }
 
-  void _showMapDialog(List<LatLng> points) {
+  void _showMapDialog(List<latLngLib.LatLng> points) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -68,25 +100,41 @@ class _RutaPedidosScreenState extends State<RutaPedidosScreen> {
           child: SizedBox(
             height: 400,
             width: 300,
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: points.first,
-                zoom: 14,
+            child: FlutterMap(
+              options: MapOptions(
+                initialCenter: points.first,
+                initialZoom: 15,
               ),
-              markers: points
-                  .map((point) => Marker(
-                        markerId: MarkerId(point.toString()),
-                        position: point,
-                      ))
-                  .toSet(),
-              polylines: {
-                Polyline(
-                  polylineId: const PolylineId('route'),
-                  points: points,
-                  color: Colors.blue,
-                  width: 5,
+              children: [
+                TileLayer(
+                  urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                  subdomains: ['a', 'b', 'c'],
                 ),
-              },
+                PolylineLayer(
+                  polylines: [
+                    Polyline(
+                      points: points,
+                      color: Colors.blue,
+                      strokeWidth: 4.0,
+                    ),
+                  ],
+                ),
+                MarkerLayer(
+                  markers: points
+                      .map((point) => Marker(
+                            point: point,
+                            width: 40,
+                            height: 40,
+                           child: const Icon(
+    Icons.location_pin,
+    color: Colors.red,
+    size: 40,
+),
+
+                          ))
+                      .toList(),
+                ),
+              ],
             ),
           ),
         );

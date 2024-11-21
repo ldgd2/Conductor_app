@@ -59,6 +59,9 @@ Future<List<dynamic>> getAllConductores() async {
   }
 }
 
+  Future<http.Response> getAllRutasOfertaconductor(int id) => _get("conductores/$id/rutas-carga-ofertas");
+
+
   Future<http.Response> createConductor(Map<String, dynamic> data) => _post("conductores", data);
   Future<http.Response> getConductorById(int id) => _get("conductores/$id");
   Future<http.Response> updateConductor(int id, Map<String, dynamic> data) => _put("conductores/$id", data);
