@@ -14,6 +14,7 @@ class Conductor {
   final double ubicacionLatitud;
   final double ubicacionLongitud;
   final String estado;
+  final String tipo;
 
   // Constructor
   Conductor({
@@ -30,6 +31,8 @@ class Conductor {
     required this.ubicacionLatitud,
     required this.ubicacionLongitud,
     required this.estado,
+    required this.tipo,
+ 
   });
 
   // Método para crear un objeto Conductor a partir de JSON
@@ -48,6 +51,7 @@ class Conductor {
       ubicacionLatitud: json['ubicacion_latitud'],
       ubicacionLongitud: json['ubicacion_longitud'],
       estado: json['estado'],
+      tipo: json['tipo'],
     );
   }
 
@@ -66,6 +70,7 @@ class Conductor {
       'ubicacion_latitud': ubicacionLatitud,
       'ubicacion_longitud': ubicacionLongitud,
       'estado': estado,
+      'tipo': tipo,
     };
   }
 }

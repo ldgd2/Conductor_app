@@ -60,8 +60,11 @@ class _LoginScreenState extends State<LoginScreen> {
       // Obtener el token FCM
       final token = await _getFCMToken();
       if (token != null) {
+        // Obtener solo el tipo del conductor
+        final tipo = await _apiService.getTipoConductorById(conductorId);
+
         // Actualizar el token en el servidor
-        final tokenResponse = await _apiService.updateToken(conductorId, token);
+        final tokenResponse = await _apiService.updateToken(conductorId, token, tipo);
 
         if (tokenResponse.statusCode == 200) {
           debugPrint("Token actualizado correctamente en el servidor.");
@@ -78,7 +81,8 @@ class _LoginScreenState extends State<LoginScreen> {
             MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         } else {
-          _showSnackBar("Error al actualizar el token.");
+          final errorMessage = jsonDecode(tokenResponse.body)['message'] ?? "Error desconocido.";
+          _showSnackBar("Error al actualizar el token: $errorMessage");
           debugPrint("Error al actualizar el token: ${tokenResponse.body}");
         }
       } else {

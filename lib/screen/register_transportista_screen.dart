@@ -12,10 +12,12 @@ class RegisterTransportistaScreen extends StatefulWidget {
   const RegisterTransportistaScreen({Key? key}) : super(key: key);
 
   @override
-  _RegisterTransportistaScreenState createState() => _RegisterTransportistaScreenState();
+  _RegisterTransportistaScreenState createState() =>
+      _RegisterTransportistaScreenState();
 }
 
-class _RegisterTransportistaScreenState extends State<RegisterTransportistaScreen> {
+class _RegisterTransportistaScreenState
+    extends State<RegisterTransportistaScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _nombreController = TextEditingController();
@@ -28,6 +30,7 @@ class _RegisterTransportistaScreenState extends State<RegisterTransportistaScree
   DateTime? _selectedDate;
   latLngLib.LatLng? _selectedLocation;
   String? _direccionSeleccionada;
+  String _tipoSeleccionado = "Recogo"; // Valor por defecto
   late String _deviceToken;
   bool _mapReady = false;
 
@@ -52,7 +55,8 @@ class _RegisterTransportistaScreenState extends State<RegisterTransportistaScree
   }
 
   Future<void> _initializeCurrentLocation() async {
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
     setState(() {
       _selectedLocation = latLngLib.LatLng(position.latitude, position.longitude);
       _mapReady = true;
@@ -61,10 +65,12 @@ class _RegisterTransportistaScreenState extends State<RegisterTransportistaScree
   }
 
   Future<void> _getAddressFromLatLng(latLngLib.LatLng position) async {
-    List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+    List<Placemark> placemarks =
+        await placemarkFromCoordinates(position.latitude, position.longitude);
     if (placemarks.isNotEmpty) {
       setState(() {
-        _direccionSeleccionada = "${placemarks.first.street}, ${placemarks.first.locality}, ${placemarks.first.country}";
+        _direccionSeleccionada =
+            "${placemarks.first.street}, ${placemarks.first.locality}, ${placemarks.first.country}";
       });
     }
   }
@@ -112,10 +118,14 @@ class _RegisterTransportistaScreenState extends State<RegisterTransportistaScree
           key: _formKey,
           child: ListView(
             children: [
-              _buildTextField(_nombreController, 'Nombre', 'Ingrese su nombre'),
-              _buildTextField(_apellidoController, 'Apellido', 'Ingrese su apellido'),
-              _buildTextField(_carnetController, 'Carnet', 'Ingrese su carnet'),
-              _buildTextField(_licenciaConducirController, 'Licencia de Conducir', 'Ingrese su licencia'),
+              _buildTextField(
+                  _nombreController, 'Nombre', 'Ingrese su nombre'),
+              _buildTextField(
+                  _apellidoController, 'Apellido', 'Ingrese su apellido'),
+              _buildTextField(
+                  _carnetController, 'Carnet', 'Ingrese su carnet'),
+              _buildTextField(_licenciaConducirController, 'Licencia de Conducir',
+                  'Ingrese su licencia'),
               ListTile(
                 title: Text(
                   _selectedDate == null
@@ -125,8 +135,33 @@ class _RegisterTransportistaScreenState extends State<RegisterTransportistaScree
                 trailing: const Icon(Icons.calendar_today, color: Colors.blue),
                 onTap: () => _selectDate(context),
               ),
-              _buildTextField(_emailController, 'Email', 'Ingrese su email', isEmail: true),
-              _buildTextField(_passwordController, 'Contraseña', 'Ingrese su contraseña', isPassword: true),
+              _buildTextField(_emailController, 'Email', 'Ingrese su email',
+                  isEmail: true),
+              _buildTextField(_passwordController, 'Contraseña',
+                  'Ingrese su contraseña',
+                  isPassword: true),
+              const SizedBox(height: 20),
+              DropdownButtonFormField<String>(
+                value: _tipoSeleccionado,
+                decoration: const InputDecoration(
+                  labelText: 'Tipo de Conductor',
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: "Recogo",
+                    child: Text("Recogedor"),
+                  ),
+                  DropdownMenuItem(
+                    value: "delivery",
+                    child: Text("Delivery"),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _tipoSeleccionado = value!;
+                  });
+                },
+              ),
               const SizedBox(height: 20),
               _mapReady && _selectedLocation != null
                   ? SizedBox(
@@ -139,7 +174,8 @@ class _RegisterTransportistaScreenState extends State<RegisterTransportistaScree
                         ),
                         children: [
                           TileLayer(
-                            urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                            urlTemplate:
+                                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
                             subdomains: ['a', 'b', 'c'],
                           ),
                           MarkerLayer(
@@ -162,15 +198,19 @@ class _RegisterTransportistaScreenState extends State<RegisterTransportistaScree
                   : const Center(child: CircularProgressIndicator()),
               ListTile(
                 title: const Text('Dirección seleccionada:'),
-                subtitle: Text(_direccionSeleccionada ?? 'Toca el mapa para seleccionar tu ubicación'),
+                subtitle: Text(_direccionSeleccionada ??
+                    'Toca el mapa para seleccionar tu ubicación'),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  if (_formKey.currentState!.validate() && _selectedLocation != null) {
+                  if (_formKey.currentState!.validate() &&
+                      _selectedLocation != null) {
                     _registerConductor();
                   } else {
-                    _showSnackBar(context, "Error al registrar conductor. Revisa los campos.", Colors.red);
+                    _showSnackBar(context,
+                        "Error al registrar conductor. Revisa los campos.",
+                        Colors.red);
                   }
                 },
                 child: const Text('Registrar'),
@@ -196,12 +236,15 @@ class _RegisterTransportistaScreenState extends State<RegisterTransportistaScree
       ubicacionLongitud: _selectedLocation!.longitude,
       estado: "activo",
       tokendevice: _deviceToken,
+      tipo: _tipoSeleccionado,
     );
 
     try {
-      final response = await _apiService.createConductor(conductor.toJson());
+      final response =
+          await _apiService.createConductor(conductor.toJson());
       if (response.statusCode == 201) {
-        _showSnackBar(context, "Conductor registrado correctamente.", Colors.green);
+        _showSnackBar(context, "Conductor registrado correctamente.",
+            Colors.green);
       } else {
         _showSnackBar(context, "Error: ${response.body}", Colors.red);
       }
@@ -210,14 +253,16 @@ class _RegisterTransportistaScreenState extends State<RegisterTransportistaScree
     }
   }
 
-  Widget _buildTextField(TextEditingController controller, String label, String hint,
+  Widget _buildTextField(TextEditingController controller, String label,
+      String hint,
       {bool isPassword = false, bool isEmail = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: TextFormField(
         controller: controller,
         obscureText: isPassword,
-        keyboardType: isEmail ? TextInputType.emailAddress : TextInputType.text,
+        keyboardType:
+            isEmail ? TextInputType.emailAddress : TextInputType.text,
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
@@ -232,7 +277,8 @@ class _RegisterTransportistaScreenState extends State<RegisterTransportistaScree
     );
   }
 
-  void _showSnackBar(BuildContext context, String message, Color backgroundColor) {
+  void _showSnackBar(
+      BuildContext context, String message, Color backgroundColor) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),

@@ -68,19 +68,53 @@ Future<List<dynamic>> getAllConductores() async {
   Future<http.Response> deleteConductor(int id) => _delete("conductores/$id");
   Future<http.Response> getTransportesByConductor(int id) => _get("conductores/$id/transportes");
 //actualizar token cinductor
-Future<http.Response> updateToken(int conductorId, String token) async {
+Future<http.Response> updateToken(int conductorId, String token, String tipo) async {
   try {
-    final url = Uri.parse("$_baseUrl/conductores/$conductorId");
+    final url = Uri.parse("http://srv640327.hstgr.cloud:8080/api/v1/conductores/$conductorId");
     final response = await http.put(
       url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"tokendevice": token}),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "tokendevice": token,
+        "tipo": tipo, // Agregado al cuerpo de la solicitud
+      }),
+      
     );
+    //debugPrint("Respuesta del servidor: ${response.statusCode}, ${response.body}");
+    
+    if (response.statusCode != 200) {
+      throw Exception("Error en la actualización del token: ${response.body}");
+    }
+
     return response;
   } catch (e) {
+   // debugPrint("Error al actualizar token: $e");
     throw Exception("Error actualizando token: $e");
   }
 }
+
+Future<String> getTipoConductorById(int conductorId) async {
+  try {
+    final url = Uri.parse("$_baseUrl/conductores/$conductorId");
+    final response = await http.get(url, headers: {
+      "Content-Type": "application/json",
+    });
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = jsonDecode(response.body);
+      return data['tipo'] ?? "default_tipo"; // Retorna el tipo o un valor por defecto
+    } else {
+      throw Exception("Error al obtener el tipo de conductor: ${response.statusCode}, ${response.body}");
+    }
+  } catch (e) {
+    throw Exception("Error al obtener el tipo de conductor: $e");
+  }
+}
+
+
+
 
 
   // 2. AgricultorController
