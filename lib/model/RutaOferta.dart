@@ -1,36 +1,38 @@
-// lib/model/ruta_oferta.dart
 
 class RutaOferta {
-  final int? id; // El ID es opcional, solo es necesario para rutas de oferta existentes
-  final DateTime fechaRecogida;
+  final int id;
+  final String fechaRecogida;
   final double capacidadUtilizada;
   final double distanciaTotal;
   final String estado;
 
-  // Constructor
   RutaOferta({
-    this.id,
+    required this.id,
     required this.fechaRecogida,
     required this.capacidadUtilizada,
     required this.distanciaTotal,
     required this.estado,
   });
 
-  // Método para crear un objeto RutaOferta a partir de JSON
   factory RutaOferta.fromJson(Map<String, dynamic> json) {
     return RutaOferta(
       id: json['id'],
-      fechaRecogida: DateTime.parse(json['fecha_recogida']),
-      capacidadUtilizada: (json['capacidad_utilizada'] as num).toDouble(),
-      distanciaTotal: (json['distancia_total'] as num).toDouble(),
-      estado: json['estado'],
+      fechaRecogida: json['fecha_recogida'],
+      capacidadUtilizada: _parseDouble(json['capacidad_utilizada']),
+      distanciaTotal: _parseDouble(json['distancia_total']),
+      estado: json['estado'] ?? "activo", // Valor por defecto
     );
   }
-
-  // Método para convertir un objeto RutaOferta a JSON
+ static double _parseDouble(dynamic value) {
+    if (value is String) {
+      return double.tryParse(value) ?? 0.0; // Convierte de String a double, o retorna 0.0 si la conversión falla.
+    }
+    return value?.toDouble() ?? 0.0; // Si ya es un número, lo convierte a double.
+  }
   Map<String, dynamic> toJson() {
     return {
-      'fecha_recogida': fechaRecogida.toIso8601String(),
+      'id': id,
+      'fecha_recogida': fechaRecogida,
       'capacidad_utilizada': capacidadUtilizada,
       'distancia_total': distanciaTotal,
       'estado': estado,

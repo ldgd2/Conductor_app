@@ -1,12 +1,10 @@
 
-import 'package:conductor_app/screen/ListaRutaScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:conductor_app/services/ConductorProvider.dart';
 import 'package:conductor_app/services/api_service.dart';
 import 'package:conductor_app/config/config.dart';
 import 'package:conductor_app/themes/theme.dart';
-import 'package:conductor_app/screen/profilescreen.dart';
 import 'package:conductor_app/screen/logingscreen.dart';
 import 'dart:convert';
 import 'package:geolocator/geolocator.dart';
@@ -15,15 +13,15 @@ import 'package:http/http.dart' as http;
 
 import 'package:permission_handler/permission_handler.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+class ListaRutaScreen extends StatefulWidget {
+  const ListaRutaScreen({Key? key}) : super(key: key);
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  _ListaRutaScreen createState() => _ListaRutaScreen();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-    // Asegúrate de tener la URL correcta
+class _ListaRutaScreen extends State<ListaRutaScreen> with SingleTickerProviderStateMixin {
+
   final ApiService _apiService = ApiService();
 
   List<Map<String, dynamic>> _routes = [];
@@ -32,11 +30,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   Map<int, Set<int>> productosSeleccionadosPorRuta = {};  // {idRuta: {idProducto}}
 
   late AnimationController _animationController;
-
-  double _iconRotation = 0.0; // Ángulo de rotación para el ícono
-
-  // Función para abrir/cerrar el panel
-
 
 
   @override
@@ -55,15 +48,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     _animationController.dispose();
     super.dispose();
   }
-
-  void _toggleDrawer(BuildContext context) {
-    Scaffold.of(context).openDrawer(); // Abre el Drawer
-    setState(() {
-      _iconRotation = _iconRotation == 0.0 ? 0.5 : 0.0; // Rota 90 grados al abrir
-    });
-  }
-
-
 
   Future<void> _loadConductorData() async {
     final conductorProvider = Provider.of<ConductorProvider>(context, listen: false);
@@ -91,10 +75,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     }
   }
 
-
 Future<void> _loadRoutes() async { 
-  setState(() {
-  });
+  setState(() {});
 
   try {
     final conductorProvider = Provider.of<ConductorProvider>(context, listen: false);
@@ -108,9 +90,16 @@ Future<void> _loadRoutes() async {
         final List<Map<String, dynamic>> allRoutes = List<Map<String, dynamic>>.from(data['rutas_carga_ofertas']);
         print("All Routes: $allRoutes");
 
+        // Filtrar rutas con estado "activo"
+        final List<Map<String, dynamic>> activeRoutes = allRoutes.where((route) {
+          return route['estado'] == 'activo'; // Filtramos por estado "activo"
+        }).toList();
+
+        print("Filtered Active Routes: $activeRoutes");
+
         // Agrupar rutas por id_ruta_oferta
         Map<int, List<Map<String, dynamic>>> groupedRoutes = {};
-        for (var route in allRoutes) {
+        for (var route in activeRoutes) {
           final idRutaOferta = int.parse(route['id_ruta_oferta'].toString());
 
           // Verifica si la ruta ya está en el grupo
@@ -122,16 +111,19 @@ Future<void> _loadRoutes() async {
         }
 
         // Aquí, agrupamos las rutas y los productos
-       List<Map<String, dynamic>> detailedRoutes = []; 
-
+        List<Map<String, dynamic>> detailedRoutes = []; 
 
         for (var group in groupedRoutes.values) {
           List<Map<String, dynamic>> detailsForGroup = [];
-          String? fechaRecoleccion;
+          String? fechaRecogida; // Inicializamos la variable
 
           for (var route in group) {
             final idCargaOferta = int.parse(route['id_carga_oferta'].toString());
-            fechaRecoleccion = route['ruta_oferta']?['fecha_recogida'] ?? 'No disponible'; // Asegurarse que no sea null
+
+            // Asegurándonos de que 'fecha_recogida' sea accesible correctamente
+            fechaRecogida = route['ruta_oferta'] != null 
+                ? route['ruta_oferta']['fecha_recogida']?.toString() ?? 'No disponible'
+                : 'No disponible';
 
             final detailsResponse = await http.get(Uri.parse("$urlapi/carga_ofertas/$idCargaOferta/detalle"));
             if (detailsResponse.statusCode == 200) {
@@ -145,10 +137,11 @@ Future<void> _loadRoutes() async {
                   'id_rutaoferta': int.parse(route['id_ruta_oferta'].toString()),
                   'id_cargaoferta': int.parse(idCargaOferta.toString()),
                   'orden': int.parse(route['orden'].toString()),
-                  'fecha_recogida': fechaRecoleccion,
+                  'fecha_recogida': fechaRecogida,
                   'nombre': detalleCargaOferta['oferta_detalle']['produccion']['producto']['nombre'],
                   'cantidad': detalleCargaOferta['pesokg'],
                 };
+                print("Detalles de rutas: $detalle");
 
                 detailsForGroup.add(detalle);
               }
@@ -158,14 +151,21 @@ Future<void> _loadRoutes() async {
           }
 
           // Agregar el grupo completo de detalles
-          if (detailsForGroup.isNotEmpty) {
-            detailedRoutes.add({
-              'id_rutaoferta': group.first['id_ruta_oferta'],
-  'fecha_recogida': fechaRecoleccion,
-  'detalles': detailsForGroup,  
-            });
-          }
+    if (detailsForGroup.isNotEmpty) {
+  final totalCantidad = detailsForGroup.fold<double>(
+    0,
+    (sum, item) => sum + (item['cantidad'] ?? 0),
+  );
+
+  detailedRoutes.add({
+    'id_rutaoferta': group.first['id_ruta_oferta'],
+    'fecha_recogida': fechaRecogida,
+    'total_cantidad': totalCantidad, // Calcula la cantidad total aquí
+    'detalles': detailsForGroup,
+  });
+}
         }
+        print("Detalles de rutas: $detailedRoutes");
 
         setState(() {
           _routes = detailedRoutes; // No necesitamos hacer cast aquí.
@@ -180,10 +180,10 @@ Future<void> _loadRoutes() async {
     debugPrint("Error al cargar rutas: $e");
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error al cargar rutas.")));
   } finally {
-    setState(() {
-    });
+    setState(() {});
   }
 }
+
 
 
 void _showRutaDetailsDialog(BuildContext context, Map<String, dynamic> rutaGroup) {
@@ -194,7 +194,7 @@ void _showRutaDetailsDialog(BuildContext context, Map<String, dynamic> rutaGroup
       List<Map<String, dynamic>> detalles = List<Map<String, dynamic>>.from(rutaGroup['detalles']);
       
       return AlertDialog(
-        title: Text('Detalles de Ruta Oferta ${rutaGroup['id_rutaoferta']}'),
+        title: Text('Detalles de la ruta ${rutaGroup['id_rutaoferta']}'),
         content: SingleChildScrollView(
           child: StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
@@ -202,7 +202,7 @@ void _showRutaDetailsDialog(BuildContext context, Map<String, dynamic> rutaGroup
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: detalles.map<Widget>((detalle) {
                   // Obtener el estado del checkbox (si ya fue confirmado)
-                  bool isChecked = detalle['isRecogidaConfirmed'] ?? false;
+            
 
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,33 +215,11 @@ void _showRutaDetailsDialog(BuildContext context, Map<String, dynamic> rutaGroup
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text('Cantidad: ${detalle['cantidad']}kg'),
-                          Checkbox(
-                            value: isChecked,
-                            activeColor: Colors.green, // Cambia el color cuando esté marcado
-                            onChanged: (bool? value) async {
-                              if (value != null && value) {
-                                int idRutaCargaOferta = detalle['id_rutacargaoferta']; // Asume que tienes el id
-                                
-                                // Llamar a la función para confirmar la recogida
-                                bool success = await confirmarRecogida(idRutaCargaOferta);
-
-                                if (success) {
-                                  // Solo actualizar el estado si la confirmación fue exitosa
-                                  setState(() {
-                                    detalle['isRecogidaConfirmed'] = true; // Marcar como confirmada
-                                  });
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text("Error al confirmar la recogida"))
-                                  );
-                                }
-                              }
-                            },
-                          ),
                         ],
                       ),
                       Text('Fecha de Recolección: ${detalle['fecha_recogida']}'),
                       SizedBox(height: 10),
+                      
                     ],
                   );
                 }).toList(),
@@ -272,35 +250,82 @@ void _showRutaDetailsDialog(BuildContext context, Map<String, dynamic> rutaGroup
 
 
 
-Future<bool> confirmarRecogida(int idRutaCargaOferta) async {
-  final url = "$urlapi/ruta_carga_ofertas/$idRutaCargaOferta/confirmar-recogida";
+Future<bool> AceptarRuta(List<int> idsRutaCargaOferta) async {
+  final conductorId = obteneridconductor();
 
-  int? conductorId = obteneridconductor();
-  final body = jsonEncode({
-    "id_conductor": conductorId,
-  });
-
-  try {
-    final response = await http.put(
-      Uri.parse(url),
-      headers: {'Content-Type': 'application/json'},
-      body: body,
-    );
-
-    if (response.statusCode == 200) {
-      print("Recogida confirmada exitosamente");
-      return true; // Indica que la confirmación fue exitosa
-    } else {
-      print("Error al confirmar la recogida: ${response.statusCode}");
-      return false; // Indica que hubo un error
-    }
-  } catch (e) {
-    print("Error en la solicitud PUT: $e");
-    return false; // Si ocurre un error en la solicitud
+  if (conductorId == null) {
+    print("Error: El ID del conductor es nulo");
+    return false;
   }
+
+  bool allSuccess = true; // Para rastrear si todas las rutas fueron aceptadas correctamente
+
+  for (int idRutaCargaOferta in idsRutaCargaOferta) {
+    final url = "$urlapi/ruta_carga_ofertas/$idRutaCargaOferta/aceptar";
+    print("$urlapi/ruta_carga_ofertas/$idRutaCargaOferta/aceptar");
+    final body = jsonEncode({
+      "id_conductor": conductorId,
+    });
+
+    try {
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
+print(body);
+      if (response.statusCode == 200) {
+        print("Se aceptó la ruta con ID $idRutaCargaOferta exitosamente");
+      } else {
+        print("Error al aceptar la ruta con ID $idRutaCargaOferta: ${response.statusCode}");
+        allSuccess = false;
+      }
+    } catch (e) {
+      print("Error en la solicitud para aceptar la ruta con ID $idRutaCargaOferta: $e");
+      allSuccess = false;
+    }
+  }
+_loadRoutes();
+  return allSuccess;
 }
 
 
+Future<bool> CancelarRuta(List<int> idsRutaCargaOferta) async {
+  final conductorId = obteneridconductor();
+
+  if (conductorId == null) {
+    print("Error: El ID del conductor es nulo");
+    return false;
+  }
+
+  bool allSuccess = true; // Para rastrear si todas las rutas fueron aceptadas correctamente
+
+    final url = "$urlapi/ruta_carga_ofertas/$idsRutaCargaOferta/cancelar";
+    final body = jsonEncode({
+      "id_conductor": conductorId,
+    });
+
+    try {
+      final response = await http.put(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        print("Se aceptó la ruta con ID $idsRutaCargaOferta exitosamente");
+      } else {
+        print("Error al aceptar la ruta con ID $idsRutaCargaOferta: ${response.statusCode}");
+        allSuccess = false;
+      }
+    } catch (e) {
+      print("Error en la solicitud para aceptar la ruta con ID $idsRutaCargaOferta: $e");
+      allSuccess = false;
+    }
+  
+_loadRoutes();
+  return allSuccess;
+}
 
 
 Future<String> obtenerUbicacionConductor() async {
@@ -500,173 +525,110 @@ Widget build(BuildContext context) {
   return Scaffold(
     backgroundColor: AppThemes.backgroundColor,
     appBar: AppBar(
-      title: const Text("Gestión de Rutas"),
-      leading: Builder(
-        builder: (BuildContext context) {
-          return IconButton(
-            icon: AnimatedRotation(
-              turns: _iconRotation,
-              duration: const Duration(milliseconds: 300), // Tiempo para la animación
-              child: const Icon(Icons.menu),
-            ),
-            onPressed: () => _toggleDrawer(context), // Abre el drawer al hacer click
-          );
-        },
-      ),
+      title: const Text("Rutas Asignadas"),
     ),
     body: Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-             const  Text(
-                'Gestión de Rutas',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 8),
-              // Aquí va la sección de "Rutas Disponibles"
-              InkWell(
-                onTap: _navigateToPedidosOfertas,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: AppThemes.cardColor,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start, // Alinear todo a la izquierda
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween, // Alinea el texto y el ícono en los extremos
-                        children: [
-                          // Texto de Rutas Disponibles
-                          Text(
-                            'Rutas Disponibles',
-                            style: TextStyle(
-                              color: Colors.red,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          // Icono de etiqueta
-                          Icon(Icons.add_location_alt, color: Colors.red),
-                        ],
-                      ),
-                      SizedBox(height: 8), // Espaciado entre las dos líneas
-                      // Texto adicional debajo
-                      Text(
-                        'Ve y acepta una',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        // Aquí está la lista de rutas
         Expanded(
-          child: _routes.isEmpty
-              ? const Center(child: Text("No hay rutas disponibles"))
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start, // Alinea el texto a la izquierda
-                  children: [
-                    // Título "Rutas Aceptadas"
-                   const  Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: Text(
-                        "Rutas Aceptadas",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red, // Puedes personalizar el color si lo deseas
-                        ),
-                      ),
-                    ),
-                    // Listado de rutas
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: _routes.length,
-                        itemBuilder: (context, index) {
-                          final ruta = _routes[index];
-                          final idRutaOferta = ruta['id_rutaoferta'];
-                          final fechaRecoleccion = ruta['fecha_recogida'];
+          child :   _routes.isEmpty
+              ? const Center(child: Text("No hay rutas asignadas disponibles"))
+              : ListView.builder(
+                  itemCount: _routes.length,
+                  itemBuilder: (context, index) {
+                    final ruta = _routes[index];
+                   
+                     List<Map<String, dynamic>> detalle = List<Map<String, dynamic>>.from(ruta['detalles']);
+                    final idRutaOferta = ruta['id_rutaoferta'];
+                    final fechaRecoleccion = ruta['fecha_recogida'];
+                    final idRutaCargaOferta = ruta['id_rutacargaoferta'];
+                     print("Id necesaro: $idRutaCargaOferta");
+                     int? id_RutaCargaOferta;
 
-                          return Card(
-                            margin: const EdgeInsets.symmetric(vertical: 8),
-                            child: ListTile(
-                              leading: const Icon(Icons.map, color: Colors.red),
-                              title: Text("Ruta Oferta ID: $idRutaOferta"),
-                              subtitle: Text("Fecha de Recolección: $fechaRecoleccion"),
-                              onTap: () {
+// Iterar para encontrar el ID
+for (var detalleItem in detalle) {
+  if (detalleItem.containsKey('id_rutacargaoferta')) {
+    id_RutaCargaOferta = detalleItem['id_rutacargaoferta'] as int;
+    break; // Detén el loop una vez encontrado
+  }
+}
+
+// Asegúrate de que no sea nulo antes de usarlo
+if (id_RutaCargaOferta != null) {
+  print("ID Ruta Carga Oferta: $id_RutaCargaOferta");
+} else {
+  print("No se encontró 'id_rutacargaoferta' en los detalles.");
+}  print("Fecha de Recolección: $fechaRecoleccion\nCantidad Total: ${ruta['total_cantidad']} kg");
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: ListTile(
+                        leading: const Icon(Icons.map, color: Colors.red),
+                        title: Text("Ruta Asignada ID: $idRutaOferta"),
+                        
+                        subtitle: Text("Fecha de Recolección: $fechaRecoleccion\nCantidad Total: ${ruta['total_cantidad']} kg"),
+                       
+                        onTap: () {
                                 // Acción al tocar una ruta
                                 _showRutaDetailsDialog(context, ruta);
                               },
-                            ),
-                          );
-                        },
+                       trailing: Row(
+  mainAxisSize: MainAxisSize.min, // Ajustar tamaño para no ocupar todo el espacio
+  children: [
+    IconButton(
+      icon: const Icon(Icons.map, color: Colors.blue),
+      onPressed: () {
+        verMapa(context, ruta); // Método para mostrar el mapa
+      },
+    ),
+   IconButton(
+  icon: const Icon(Icons.check_circle, color: Colors.green),
+  onPressed: () async {
+    final detalles = List<Map<String, dynamic>>.from(ruta['detalles']);
+    final idsRutaCargaOferta = detalles.map<int>((detalle) => detalle['id_rutacargaoferta']).toList();
+final idsRutaOferta = detalles.map<int>((detalle) => detalle['id_rutaoferta']).toList();
+    final success = await AceptarRuta(idsRutaOferta);
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Todas las rutas asociadas fueron aceptadas exitosamente")),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Hubo un error al aceptar una o más rutas")),
+      );
+    }
+  },
+),
+    IconButton(
+  icon: const Icon(Icons.cancel, color: Colors.red),
+  onPressed: () async {
+    final detalles = List<Map<String, dynamic>>.from(ruta['detalles']);
+    final idsRutaCargaOferta = detalles.map<int>((detalle) => detalle['id_rutacargaoferta']).toList();
+final idsRutaOferta = detalles.map<int>((detalle) => detalle['id_rutaoferta']).toList();
+    final success = await CancelarRuta(idsRutaOferta);
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Todas las rutas asociadas fueron aceptadas exitosamente")),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Hubo un error al aceptar una o más rutas")),
+      );
+    }
+  },
+),
+  ],
+),
+
                       ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
         ),
       ],
     ),
-    // Drawer Panel
-    drawer: Drawer(
-      backgroundColor: Colors.black.withOpacity(0.7), // Fondo oscuro y transparente
-      child: Column(
-        children: [
-          const SizedBox(height: 50), // Espaciado para el encabezado del panel
-          ListTile(
-            leading: const Icon(Icons.person, color: Colors.red),
-            title: const Text(
-              'Perfil',
-              style: TextStyle(color: Colors.white),
-            ),
-            onTap: _navigateToProfile,
-          ),
-          const Divider(color: Colors.white), // Línea divisoria
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title:const Text(
-              'Cerrar Sesión',
-              style: TextStyle(color: Colors.white),
-            ),
-            onTap: _logout,
-          ),
-        ],
-      ),
-    ),
   );
 }
-
-// Función para redirigir al perfil
-void _navigateToProfile() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => const ProfileScreen()),
-  );
-}
-
-// Función para redirigir a la pantalla de pedidos/ofertas
-void _navigateToPedidosOfertas() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      // builder: (context) => RutasScreen(),
-      builder: (context) => ListaRutaScreen(),
-    ),
-  );
-}
-
 
 
 

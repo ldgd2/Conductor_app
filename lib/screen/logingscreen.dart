@@ -4,7 +4,11 @@ import 'package:provider/provider.dart';
 import 'package:conductor_app/services/api_service.dart';
 import 'package:conductor_app/screen/register_transportista_screen.dart';
 import 'package:conductor_app/screen/home_screen.dart';
+import 'package:conductor_app/screen/homeScreenDelivery.dart';
 import 'package:conductor_app/themes/theme.dart';
+import 'package:conductor_app/config/config.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'dart:convert';
 import 'package:conductor_app/services/ConductorProvider.dart';
 import 'package:conductor_app/model/statusModel.dart';
@@ -32,9 +36,42 @@ class _LoginScreenState extends State<LoginScreen> {
       return null;
     }
   }
+Future<String?> getConductorTipo(int conductorId) async {
+  // Construir la URL
+  final url = Uri.parse('$urlapi/conductores/$conductorId');
+  debugPrint("URL para obtener detalles del conductor: $url");
 
-  /// Método para iniciar sesión
- Future<void> _login() async {
+  try {
+    // Realizar la solicitud GET
+    final response = await http.get(url);
+
+    // Verificar el código de estado
+    if (response.statusCode == 200) {
+      // Parsear el cuerpo de la respuesta
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      // Retornar el valor del campo 'tipo'
+      final tipo = data['tipo'];
+      debugPrint("Tipo del conductor obtenido: $tipo");
+      return tipo;
+    } else {
+      // Manejo de error cuando la respuesta no es 200
+      debugPrint("Error al obtener detalles del conductor:");
+      debugPrint("Status Code: ${response.statusCode}");
+      debugPrint("Response Body: ${response.body}");
+      return null;
+    }
+  } catch (e) {
+    // Manejo de excepciones
+    debugPrint("Excepción al obtener detalles del conductor: $e");
+    return null;
+  }
+}
+
+
+
+/// Método para iniciar sesión
+Future<void> _login() async {
   final statusModel = Provider.of<StatusModel>(context, listen: false);
   final conductorProvider = Provider.of<ConductorProvider>(context, listen: false);
 
@@ -61,29 +98,42 @@ class _LoginScreenState extends State<LoginScreen> {
       final token = await _getFCMToken();
       if (token != null) {
         // Obtener solo el tipo del conductor
-        final tipo = await _apiService.getTipoConductorById(conductorId);
+        final tipo = await getConductorTipo(conductorId);
 
-        // Actualizar el token en el servidor
-        final tokenResponse = await _apiService.updateToken(conductorId, token, tipo);
+        if (tipo != null) {
+          // Actualizar el token en el servidor
+          final tokenResponse = await _apiService.updateToken(conductorId, token, tipo);
 
-        if (tokenResponse.statusCode == 200) {
-          debugPrint("Token actualizado correctamente en el servidor.");
+          if (tokenResponse.statusCode == 200) {
+            debugPrint("Token actualizado correctamente en el servidor.");
 
-          // Actualizar estado en StatusModel
-          statusModel.setStatus(conductorId, token, true);
+            // Actualizar estado en StatusModel
+            statusModel.setStatus(conductorId, token, true);
 
-          // Actualizar información en ConductorProvider
-          conductorProvider.setConductor(conductorId, nombre, email);
+            // Actualizar información en ConductorProvider
+            conductorProvider.setConductor(conductorId, nombre, email);
 
-          // Navegar al HomeScreen
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
+            // Redirigir basado en el tipo del conductor
+            if (tipo == "recogo") {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const HomeScreen()),
+              );
+            } else if (tipo == "delivery") {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const HomeScreenDelivery()),
+              );
+            } else {
+              _showSnackBar("Tipo de conductor desconocido.");
+            }
+          } else {
+            final errorMessage = jsonDecode(tokenResponse.body)['message'] ?? "Error desconocido.";
+            _showSnackBar("Error al actualizar el token: $errorMessage");
+            debugPrint("Error al actualizar el token: ${tokenResponse.body}");
+          }
         } else {
-          final errorMessage = jsonDecode(tokenResponse.body)['message'] ?? "Error desconocido.";
-          _showSnackBar("Error al actualizar el token: $errorMessage");
-          debugPrint("Error al actualizar el token: ${tokenResponse.body}");
+          _showSnackBar("No se pudo determinar el tipo de conductor.");
         }
       } else {
         _showSnackBar("No se pudo obtener el token FCM.");
@@ -102,12 +152,14 @@ class _LoginScreenState extends State<LoginScreen> {
 }
 
 
-  /// Mostrar mensajes al usuario
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: AppThemes.primaryColor),
-    );
-  }
+/// Mostrar mensajes al usuario
+void _showSnackBar(String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message), backgroundColor: AppThemes.primaryColor),
+  );
+}
+
+
 
   @override
   Widget build(BuildContext context) {

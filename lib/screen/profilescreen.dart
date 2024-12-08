@@ -65,7 +65,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               trailing: const Icon(Icons.arrow_forward_ios, color: AppThemes.primaryColor),
               onTap: () {
-                // Implementa lógica para cambiar contraseña
+          
               },
             ),
             const Divider(),
@@ -81,7 +81,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               trailing: const Icon(Icons.arrow_forward_ios, color: AppThemes.primaryColor),
               onTap: () {
-                // Implementa lógica para configuración
+         
               },
             ),
           ],

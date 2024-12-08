@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:conductor_app/config/config.dart';
 class ApiService {
@@ -70,7 +71,7 @@ Future<List<dynamic>> getAllConductores() async {
 //actualizar token cinductor
 Future<http.Response> updateToken(int conductorId, String token, String tipo) async {
   try {
-    final url = Uri.parse("http://srv640327.hstgr.cloud:8080/api/v1/conductores/$conductorId");
+    final url = Uri.parse("$urlapi/conductores/$conductorId");
     final response = await http.put(
       url,
       headers: {
@@ -92,6 +93,30 @@ Future<http.Response> updateToken(int conductorId, String token, String tipo) as
   } catch (e) {
    // debugPrint("Error al actualizar token: $e");
     throw Exception("Error actualizando token: $e");
+  }
+}
+
+Future<http.Response> updateToken2(int conductorId, String? token, String tipo) async {
+  try {
+    final url = Uri.parse("$urlapi/conductores/$conductorId");
+    debugPrint("URL para actualizar token: $url");
+    debugPrint("Payload: ${jsonEncode({"tokendevice": token, "tipo": tipo})}");
+
+    final response = await http.put(
+      url,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: jsonEncode({
+        "tokendevice": token,
+        "tipo": tipo,
+      }),
+    );
+
+    return response;
+  } catch (e) {
+    debugPrint("Error al actualizar el token: $e");
+    rethrow;
   }
 }
 
@@ -256,18 +281,69 @@ Future<http.Response> updateCargaOferta(int id, Map<String, dynamic> data) => _p
 Future<http.Response> deleteCargaOferta(int id) => _delete("carga_ofertas/$id");
 
 // 17. RutaOfertaController
+
+/// Obtener todas las rutas de oferta
 Future<http.Response> getAllRutasOferta() => _get("ruta_ofertas");
+
+/// Crear una nueva ruta de oferta
+/// [data] es un Map que contiene los datos necesarios para la creación
 Future<http.Response> createRutaOferta(Map<String, dynamic> data) => _post("ruta_ofertas", data);
-Future<http.Response> getRutaOfertaById(int id) => _get("ruta_ofertas/$id");
+
+/// Obtener detalles de una ruta de oferta específica
+/// [id] es el identificador único de la ruta
+Future<Map<String, dynamic>> getRutaOfertaById(int id) async {
+  final response = await http.get(Uri.parse('$urlapi/'));
+
+  if (response.statusCode == 200) {
+    return jsonDecode(response.body);
+  } else {
+    throw Exception("Error al obtener detalles de la ruta con ID $id: ${response.statusCode}");
+  }
+}
+
+/// Actualizar los datos de una ruta de oferta específica
+/// [id] es el identificador único de la ruta
+/// [data] contiene los nuevos datos para actualizar
 Future<http.Response> updateRutaOferta(int id, Map<String, dynamic> data) => _put("ruta_ofertas/$id", data);
+
+/// Eliminar una ruta de oferta
+/// [id] es el identificador único de la ruta
 Future<http.Response> deleteRutaOferta(int id) => _delete("ruta_ofertas/$id");
+
+/// Obtener puntos de ruta, detalles de recojo y punto de acopio
+/// [id] es el identificador único de la ruta
+Future<http.Response> getPuntosRutaOferta(int id) => _get("ruta_ofertas/$id/puntos-ruta");
+
+/// Obtener detalles de las cargas asociadas a la ruta de oferta
+/// [id] es el identificador único de la ruta
+Future<http.Response> getCargasRutaOferta(int id) => _get("ruta_ofertas/$id/cargas");
+
 
 // 18. RutaCargaOfertaController
 Future<http.Response> getAllRutaCargasOferta() => _get("ruta_carga_ofertas");
+
 Future<http.Response> createRutaCargaOferta(Map<String, dynamic> data) => _post("ruta_carga_ofertas", data);
+
 Future<http.Response> getRutaCargaOfertaById(int id) => _get("ruta_carga_ofertas/$id");
+
 Future<http.Response> updateRutaCargaOferta(int id, Map<String, dynamic> data) => _put("ruta_carga_ofertas/$id", data);
+
 Future<http.Response> deleteRutaCargaOferta(int id) => _delete("ruta_carga_ofertas/$id");
+
+// Métodos específicos de la API para actualizar estados
+Future<http.Response> aceptarRutaCargaOferta(int id, Map<String, dynamic> data) =>
+    _put("ruta_carga_ofertas/$id/aceptar", data);
+
+Future<http.Response> confirmarRecogidaRutaCargaOferta(int id) =>
+    _put("ruta_carga_ofertas/$id/confirmar-recogida", {});
+
+Future<http.Response> terminarRutaCargaOferta(int id) =>
+    _put("ruta_carga_ofertas/$id/terminar", {});
+
+// Obtener puntos de la ruta
+Future<http.Response> getPuntosRutaCargaOferta(int id) => _get("ruta_carga_ofertas/$id/getPuntosRuta");
+
+
 
 // 19. CargaPedidoController
 Future<http.Response> getAllCargasPedido() => _get("carga_pedidos");

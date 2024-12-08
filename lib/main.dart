@@ -1,11 +1,11 @@
-import 'package:conductor_app/config/config.dart';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'dart:developer' as developer;
 import 'package:conductor_app/screen/logingscreen.dart';
 import 'package:conductor_app/screen/home_screen.dart';
-import 'package:conductor_app/screen/PedidosOfertasScreen.dart';
+import 'package:conductor_app/screen/ListaRutaScreen.dart';
 import 'package:conductor_app/themes/theme.dart';
 import 'package:conductor_app/model/statusModel.dart';
 import 'package:conductor_app/services/ConductorProvider.dart';
@@ -69,7 +69,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
-        '/route': (context) => const RutaPedidosScreen(),
+       // '/route': (context) => const ListaRutaScreen(),
       },
     );
   }

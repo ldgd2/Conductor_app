@@ -148,7 +148,7 @@ class _RegisterTransportistaScreenState
                 ),
                 items: const [
                   DropdownMenuItem(
-                    value: "Recogo",
+                    value: "recogo",
                     child: Text("Recogedor"),
                   ),
                   DropdownMenuItem(
