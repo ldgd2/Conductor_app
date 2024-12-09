@@ -1,10 +1,11 @@
+import 'package:conductor_app/screen/home_screen_delivery.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:provider/provider.dart';
 import 'package:conductor_app/services/api_service.dart';
 import 'package:conductor_app/screen/register_transportista_screen.dart';
 import 'package:conductor_app/screen/home_screen.dart';
-import 'package:conductor_app/screen/homeScreenDelivery.dart';
+
 import 'package:conductor_app/themes/theme.dart';
 import 'package:conductor_app/config/config.dart';
 import 'package:http/http.dart' as http;
@@ -122,7 +123,7 @@ Future<void> _login() async {
             } else if (tipo == "delivery") {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => const HomeScreenDelivery()),
+              MaterialPageRoute(builder: (context) => const HomeScreenDelivery()),
               );
             } else {
               _showSnackBar("Tipo de conductor desconocido.");
