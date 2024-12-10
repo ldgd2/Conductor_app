@@ -891,7 +891,7 @@ Widget build(BuildContext context) {
                       margin: const EdgeInsets.symmetric(vertical: 8),
                       child: ListTile(
                         leading: const Icon(Icons.pending, color: Colors.orange),
-                        title: Text("Ruta Oferta ID: $idRutaOferta"),
+                        title: Text("Ruta en proceso"),
                         subtitle: Text("Fecha de Recolección: $fechaRecoleccion"),
                         onTap: () {
                           _showRutaDetailsDialog(context, ruta);
@@ -927,7 +927,7 @@ Widget build(BuildContext context) {
                       margin: const EdgeInsets.symmetric(vertical: 8),
                       child: ListTile(
                         leading: const Icon(Icons.check_circle, color: Colors.green),
-                        title: Text("Ruta Oferta ID: $idRutaOferta"),
+                        title: Text("Ruta Finalizada"),
                         subtitle: Text("Fecha de Recolección: $fechaRecoleccion"),
                         onTap: () {
                           _showRutaDetailsDialog(context, ruta);

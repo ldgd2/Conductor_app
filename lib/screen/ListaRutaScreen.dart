@@ -1,4 +1,6 @@
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:conductor_app/screen/RutaScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:conductor_app/services/ConductorProvider.dart';
@@ -83,6 +85,7 @@ Future<void> _loadRoutes() async {
     final conductorId = conductorProvider.conductorId;
 
     final response = await http.get(Uri.parse("$urlapi/conductores/$conductorId/rutas-carga-ofertas"));
+    print("Respuesta completa de puntos-ruta: ${response.body}");
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
 
@@ -133,14 +136,16 @@ Future<void> _loadRoutes() async {
                 final detalleCargaOferta = detailsData['detalle_carga_oferta'];
 
                 final Map<String, dynamic> detalle = {
-                  'id_rutacargaoferta': int.parse(route['id'].toString()),
-                  'id_rutaoferta': int.parse(route['id_ruta_oferta'].toString()),
-                  'id_cargaoferta': int.parse(idCargaOferta.toString()),
-                  'orden': int.parse(route['orden'].toString()),
-                  'fecha_recogida': fechaRecogida,
-                  'nombre': detalleCargaOferta['oferta_detalle']['produccion']['producto']['nombre'],
-                  'cantidad': detalleCargaOferta['pesokg'],
-                };
+ 'id_rutacargaoferta': int.parse(route['id'].toString()),
+  'id_cargaoferta': int.parse(route['id_carga_oferta'].toString()), // Mantener id_cargaoferta
+  'id_rutaoferta': int.parse(route['id_ruta_oferta'].toString()),
+  'orden': int.parse(route['orden'].toString()),
+  'fecha_recogida': fechaRecogida,
+  'nombre': detalleCargaOferta['oferta_detalle']['produccion']['producto']['nombre'],
+  'cantidad': detalleCargaOferta['pesokg'],
+};
+
+
                 print("Detalles de rutas: $detalle");
 
                 detailsForGroup.add(detalle);
@@ -285,7 +290,6 @@ print(body);
       allSuccess = false;
     }
   }
-_loadRoutes();
   return allSuccess;
 }
 
@@ -419,6 +423,99 @@ Future<void> verMapa(BuildContext context, Map<String, dynamic> rutaGroup) async
 }
 
 
+
+Future<Map<String, dynamic>> obtenerDetallesRuta(Map<String, dynamic> rutaGroup) async {
+  try {
+    List<Map<String, dynamic>> productos = [];
+    Map<String, dynamic> acopioLocation = {};
+    String conductorLocation = await obtenerUbicacionConductor();
+
+    final idRutaOferta = rutaGroup['id_rutaoferta'];
+
+    final response = await http.get(Uri.parse("$urlapi/ruta_ofertas/$idRutaOferta/puntos-ruta"));
+    print("Respuesta de puntos-ruta: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      if (data['puntos_ruta'] != null) {
+        for (var punto in data['puntos_ruta']) {
+          if (punto['tipo'] == 'carga') {
+            final producto = {
+              'lat': punto['lat'].toString(),
+              'lon': punto['lon'].toString(),
+              'producto': punto['producto'] ?? 'Producto desconocido',
+              'cantidad': punto['cantidad'] ?? 0,
+              'unidad': punto['unidad'] ?? 'Kg',
+              'id_rutaoferta': rutaGroup['id_rutaoferta'],
+              'id_rutacargaoferta': punto['id'], // Extraemos correctamente el ID del punto
+            };
+            print("Producto procesado: $producto");
+            productos.add(producto);
+          } else if (punto['tipo'] == 'punto_acopio') {
+            acopioLocation = {
+              'lat': punto['lat'].toString(),
+              'lon': punto['lon'].toString(),
+            };
+            print("Punto de acopio procesado: $acopioLocation");
+          }
+        }
+
+        return {
+          'conductorLocation': conductorLocation,
+          'productos': productos,
+          'acopioLocation': acopioLocation,
+        };
+      } else {
+        throw Exception("No se encontraron puntos de ruta.");
+      }
+    } else {
+      throw Exception("Error al obtener puntos de ruta: ${response.statusCode}");
+    }
+  } catch (e) {
+    print("Error al obtener detalles de la ruta: $e");
+    throw Exception("Error al procesar la ruta.");
+  }
+}
+
+
+
+
+
+_navegarARutaScreen(BuildContext context, Map<String, dynamic> rutaGroup) async {
+  try {
+    final rutaDetalles = await obtenerDetallesRuta(rutaGroup);
+
+    final productosValidos = rutaDetalles['productos']
+        .where((producto) => producto['id_rutaoferta'] != null)
+        .toList();
+
+    if (productosValidos.isEmpty) {
+      print("No hay productos válidos con id_rutacargaoferta.");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No hay productos válidos en esta ruta")),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RutaScreen(
+          conductorLocation: rutaDetalles['conductorLocation'],
+          productos: productosValidos,
+          acopioLocation: rutaDetalles['acopioLocation'],
+          idRutaOferta: rutaGroup['id_rutaoferta'], // Pasar id_rutaoferta de la ruta
+        ),
+      ),
+    );
+  } catch (e) {
+    print("Error al navegar a RutaScreen: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Error al cargar los detalles de la ruta")),
+    );
+  }
+}
 
 
 
@@ -566,10 +663,11 @@ if (id_RutaCargaOferta != null) {
                         
                         subtitle: Text("Fecha de Recolección: $fechaRecoleccion\nCantidad Total: ${ruta['total_cantidad']} kg"),
                        
-                        onTap: () {
-                                // Acción al tocar una ruta
-                                _showRutaDetailsDialog(context, ruta);
-                              },
+                        onTap: () async {
+  _navegarARutaScreen(context, ruta);
+ 
+},
+
                        trailing: Row(
   mainAxisSize: MainAxisSize.min, // Ajustar tamaño para no ocupar todo el espacio
   children: [

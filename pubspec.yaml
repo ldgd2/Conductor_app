@@ -38,7 +38,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^1.2.2
   provider: ^6.1.2
-  google_maps_flutter: ^2.9.0
+  google_maps_flutter: ^2.10.0
   geolocator: ^9.0.0
   geocoding: ^3.0.0
   flutter_map: ^7.0.2
@@ -53,6 +53,8 @@ dependencies:
   url_launcher: ^6.3.1
   permission_handler: ^11.3.1
   flutter_launcher_icons: ^0.14.2
+  location: ^7.0.1
+  flutter_polyline_points: ^2.1.0
 
 dev_dependencies:
   flutter_test:
@@ -70,7 +72,8 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-
+assets:
+    - assets/images/driver_icon.png
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

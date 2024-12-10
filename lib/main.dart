@@ -1,4 +1,4 @@
-
+import 'package:conductor_app/screen/home_screen_delivery.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
@@ -24,26 +24,22 @@ Future<void> main() async {
 
   // Inicializar servicio de notificaciones globalmente
   final notificationService = NotificationService();
-  await notificationService.init();
 
-  // Inicializar Providers
-  final statusModel = StatusModel();
-  final conductorProvider = ConductorProvider();
-
-  // Obtener notificación inicial si la app fue abierta desde una notificación
-  final initialNotification = await AwesomeNotifications()
-      .getInitialNotificationAction(removeFromActionEvents: true);
+  // Crear un contexto inicial para pasar a init
+  final navigatorKey = GlobalKey<NavigatorState>();
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider<StatusModel>.value(value: statusModel),
-        ChangeNotifierProvider<ConductorProvider>.value(value: conductorProvider),
+        ChangeNotifierProvider<StatusModel>(create: (_) => StatusModel()),
+        ChangeNotifierProvider<ConductorProvider>(create: (_) => ConductorProvider()),
         ChangeNotifierProvider<NewRoutesNotifier>(create: (_) => NewRoutesNotifier()),
       ],
-      child: MyApp(
-        notificationService: notificationService,
-        initialNotification: initialNotification,
+      child: Builder(
+        builder: (BuildContext context) {
+          notificationService.init(navigatorKey, context);
+          return MyApp(notificationService: notificationService);
+        },
       ),
     ),
   );
@@ -61,16 +57,47 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Manejar notificación inicial si existe
+    if (initialNotification != null) {
+      _handleNotificationAction(context, initialNotification!);
+    }
+
     return MaterialApp(
       title: 'Registro de Transportista',
       theme: AppThemes.darkTheme,
-      navigatorKey: navigatorKey,
+      navigatorKey: navigatorKey, // Aquí está el navigatorKey
       home: const LoginScreen(), // Inicio en la pantalla de Login
       routes: {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
-       // '/route': (context) => const ListaRutaScreen(),
+        '/route': (context) => const ListaRutaScreen(),
       },
     );
+  }
+
+
+  void _handleNotificationAction(BuildContext context, ReceivedAction action) async {
+    // Extraer datos específicos de la notificación
+    final payload = action.payload ?? {};
+    final tipo = payload['tipo'];
+
+    // Obtener el tipo de conductor
+    final conductorProvider = Provider.of<ConductorProvider>(context, listen: false);
+    final conductorId = conductorProvider.conductorId;
+    final conductorTipo = conductorId != null
+        ? await notificationService.getConductorTipo(conductorId)
+        : null;
+
+    if (tipo == "recogo") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const ListaRutaScreen()),
+      );
+    } else if (tipo == "delivery" || conductorTipo == "delivery") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreenDelivery()),
+      );
+    }
   }
 }
