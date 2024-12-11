@@ -482,33 +482,52 @@ Future<Map<String, dynamic>> obtenerDetallesRuta(Map<String, dynamic> rutaGroup)
 
 
 
-_navegarARutaScreen(BuildContext context, Map<String, dynamic> rutaGroup) async {
+Future<void> _navegarARutaScreen(BuildContext context, Map<String, dynamic> rutaGroup) async {
   try {
-    final rutaDetalles = await obtenerDetallesRuta(rutaGroup);
+    final idRutaOferta = rutaGroup['id_rutaoferta'];
 
-    final productosValidos = rutaDetalles['productos']
-        .where((producto) => producto['id_rutaoferta'] != null)
-        .toList();
+    // Llama a la API para obtener el estado
+    final response = await http.get(Uri.parse("$urlapi/ruta_ofertas/$idRutaOferta"));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final estado = data['estado'];
 
-    if (productosValidos.isEmpty) {
-      print("No hay productos válidos con id_rutacargaoferta.");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No hay productos válidos en esta ruta")),
-      );
-      return;
+      // Verificar si la ruta es válida para navegación
+      if (estado == 'activo' || estado == 'en_proceso' || estado == 'finalizado') {
+        final rutaDetalles = await obtenerDetallesRuta(rutaGroup);
+
+        final productosValidos = rutaDetalles['productos']
+            .where((producto) => producto['id_rutaoferta'] != null)
+            .toList();
+
+        if (productosValidos.isEmpty) {
+          print("No hay productos válidos con id_rutacargaoferta.");
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("No hay productos válidos en esta ruta")),
+          );
+          return;
+        }
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RutaScreen(
+              conductorLocation: rutaDetalles['conductorLocation'],
+              productos: productosValidos,
+              acopioLocation: rutaDetalles['acopioLocation'],
+              idRutaOferta: idRutaOferta,
+              estadoRuta: estado, // Pasar el estado al widget RutaScreen
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Ruta no válida para navegación")),
+        );
+      }
+    } else {
+      throw Exception("Error al verificar el estado de la ruta: ${response.statusCode}");
     }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RutaScreen(
-          conductorLocation: rutaDetalles['conductorLocation'],
-          productos: productosValidos,
-          acopioLocation: rutaDetalles['acopioLocation'],
-          idRutaOferta: rutaGroup['id_rutaoferta'], // Pasar id_rutaoferta de la ruta
-        ),
-      ),
-    );
   } catch (e) {
     print("Error al navegar a RutaScreen: $e");
     ScaffoldMessenger.of(context).showSnackBar(

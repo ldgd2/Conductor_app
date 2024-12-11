@@ -13,12 +13,14 @@ class RutaScreen extends StatefulWidget {
   final List<Map<String, dynamic>> productos;
   final Map<String, dynamic> acopioLocation;
 final int idRutaOferta;
+final String estadoRuta;
 
   const RutaScreen({
     required this.conductorLocation,
     required this.productos,
     required this.acopioLocation,
     required this.idRutaOferta,
+     required this.estadoRuta,
   });
 
   @override
@@ -39,9 +41,18 @@ void initState() {
   super.initState();
   _filtrarRutas();
   _initializeLocationUpdates();
+   rutaAceptada = widget.estadoRuta == 'en_proceso' || widget.estadoRuta == 'finalizado';
+
+  if (rutaAceptada) {
+    _initializeLocationUpdates();
+    _generateRoute();
+  } else {
+    _filtrarRutas();
+  }
   _recogidaStatus = List<bool>.filled(widget.productos.length, false);
   _checkRutaAceptada();
   _generateRoute();
+  _initializeRecogidaStatus();
 }
 
  @override
@@ -78,6 +89,33 @@ void initState() {
   }
   return [];
 }
+
+Future<void> _initializeRecogidaStatus() async {
+  final url = "$urlapi/ruta_ofertas/${widget.idRutaOferta}";
+  try {
+    final response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final rutaCargaOferta = data['ruta_carga_oferta'];
+
+      setState(() {
+        _recogidaStatus = widget.productos.map((producto) {
+          final matchingItem = rutaCargaOferta.firstWhere(
+            (item) => item['id'] == producto['id_rutacargaoferta'],
+            orElse: () => null,
+          );
+          // Activar el checkbox si el estado es "finalizado"
+          return matchingItem?['carga_oferta']?['estado'] == 'finalizado';
+        }).toList();
+      });
+    } else {
+      print("Error al obtener el estado de los productos: ${response.statusCode}");
+    }
+  } catch (e) {
+    print("Error al inicializar el estado de los checkboxes: $e");
+  }
+}
+
 
 // # # # funciones para Aceptar,Confirmar Ruta # # #
 Future<bool> AceptarRuta(List<int> idsRutaOferta) async {
@@ -468,13 +506,13 @@ Future<void> _filtrarRutas() async {
 // # # # Interfaz # # #
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: rutaAceptada
-          ? _buildRutaAceptada() // Interfaz para ruta aceptada
-          : _buildRutaNoAceptada(), // Interfaz para ruta no aceptada
-    );
-  }
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: rutaAceptada
+        ? _buildRutaAceptada() // Interfaz para rutas aceptadas o finalizadas
+        : _buildRutaNoAceptada(), // Interfaz para rutas no aceptadas
+  );
+}
 
   Widget _buildRutaNoAceptada() {
     return Stack(
@@ -563,7 +601,7 @@ Widget _buildRutaAceptada() {
                           value: _recogidaStatus[index],
                           activeColor: Colors.green,
                           onChanged: (bool? value) async {
-                            if (value == true) {
+                            if (!_recogidaStatus[index] && value == true) {
                               final success = await confirmarRecogida(
                                 producto['id_rutacargaoferta'], // Pasamos la ID correcta
                               );
