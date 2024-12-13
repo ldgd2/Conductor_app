@@ -17,11 +17,10 @@ import '../main.dart';
 class NotificationService {
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
-  // Aquí agregamos un constructor para recibir el navigatorKey
   NotificationService();
 
   Future<void> init(GlobalKey<NavigatorState> navigatorKey, BuildContext context) async {
-    // Inicializar Awesome Notifications
+
     await AwesomeNotifications().initialize(
       null,
       [
@@ -75,7 +74,7 @@ class NotificationService {
   }
 
   void _showAwesomeNotification(Map<String, dynamic> data, String? tipoConductor) {
-    // Extraer los datos necesarios para la notificación
+
     final String title = data['title'] ?? 'Título de notificación';
     final String body = data['body'] ?? 'Cuerpo de la notificación';
     final String tipo = data['tipo'] ?? 'default';
@@ -94,10 +93,9 @@ class NotificationService {
 
   void _handleNotificationAction(
       BuildContext context, Map<String, dynamic> data, String? tipoConductor) {
-    // Obtener el tipo de notificación desde los datos
+
     final String tipo = data['tipo'] ?? 'default';
 
-    // Redirigir según el tipo y el tipo del conductor
     if (tipo == "recogo") {
       Navigator.pushReplacement(
         context,
@@ -124,7 +122,6 @@ class NotificationService {
   }
 
  
-  // Método estático para manejar la acción de la notificación
  // Método estático para manejar las acciones de la notificación
 @pragma('vm:entry-point')
   static Future<void> onActionReceived(ReceivedAction receivedAction, GlobalKey<NavigatorState> navigatorKey) async {
@@ -132,10 +129,9 @@ class NotificationService {
     final String tipo = receivedAction.payload?['tipo'] ?? 'default';
     final String? tipoPayload = receivedAction.payload?['tipoConductor'];
 
-    // Realizar las acciones basadas en el tipo
     if (tipo == "recogo") {
       navigatorKey.currentState?.pushReplacement(
-        MaterialPageRoute(builder: (context) => HomeScreen()),
+        MaterialPageRoute(builder: (context) => ListaRutaScreen()),
       );
     } else if (tipo == "delivery") {
       navigatorKey.currentState?.pushReplacement(
@@ -144,7 +140,7 @@ class NotificationService {
     } else if (tipoPayload != null) {
       if (tipoPayload == "recogo") {
         navigatorKey.currentState?.pushReplacement(
-          MaterialPageRoute(builder: (context) => HomeScreen()),
+          MaterialPageRoute(builder: (context) => ListaRutaScreen()),
         );
       } else if (tipoPayload == "delivery") {
         navigatorKey.currentState?.pushReplacement(
@@ -158,32 +154,29 @@ class NotificationService {
 
 
   Future<String?> getConductorTipo(int conductorId) async {
-    // Construir la URL
+ 
     final url = Uri.parse('$urlapi/conductores/$conductorId');
     debugPrint("URL para obtener detalles del conductor: $url");
 
     try {
-      // Realizar la solicitud GET
+
       final response = await http.get(url);
 
-      // Verificar el código de estado
       if (response.statusCode == 200) {
-        // Parsear el cuerpo de la respuesta
         final Map<String, dynamic> data = jsonDecode(response.body);
 
-        // Retornar el valor del campo 'tipo'
         final tipo = data['tipo'];
         debugPrint("Tipo del conductor obtenido: $tipo");
         return tipo;
       } else {
-        // Manejo de error cuando la respuesta no es 200
+
         debugPrint("Error al obtener detalles del conductor:");
         debugPrint("Status Code: ${response.statusCode}");
         debugPrint("Response Body: ${response.body}");
         return null;
       }
     } catch (e) {
-      // Manejo de excepciones
+
       debugPrint("Excepción al obtener detalles del conductor: $e");
       return null;
     }

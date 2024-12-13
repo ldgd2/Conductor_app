@@ -35,7 +35,7 @@ class ProfileScreen extends StatelessWidget {
               ),
               trailing: const Icon(Icons.arrow_forward_ios, color: AppThemes.primaryColor),
               onTap: () {
-                // Implementa lógica para navegar a la pantalla de información personal
+                
               },
             ),
             const Divider(),

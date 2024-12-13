@@ -1,7 +1,7 @@
 // lib/model/oferta.dart
 
 class Oferta {
-  final int? id; // El ID es opcional ya que solo es necesario para ofertas existentes
+  final int? id; 
   final int idProduccion;
   final DateTime fechaCreacion;
   final DateTime fechaExpiracion;

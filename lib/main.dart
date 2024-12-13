@@ -18,14 +18,8 @@ final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   developer.log('Flutter app initialized!');
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Inicializar Firebase
   await Firebase.initializeApp();
-
-  // Inicializar servicio de notificaciones globalmente
   final notificationService = NotificationService();
-
-  // Crear un contexto inicial para pasar a init
   final navigatorKey = GlobalKey<NavigatorState>();
 
   runApp(
@@ -57,7 +51,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Manejar notificación inicial si existe
+
     if (initialNotification != null) {
       _handleNotificationAction(context, initialNotification!);
     }
@@ -65,8 +59,8 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Registro de Transportista',
       theme: AppThemes.darkTheme,
-      navigatorKey: navigatorKey, // Aquí está el navigatorKey
-      home: const LoginScreen(), // Inicio en la pantalla de Login
+      navigatorKey: navigatorKey, 
+      home: const LoginScreen(), 
       routes: {
         '/login': (context) => const LoginScreen(),
         '/home': (context) => const HomeScreen(),
@@ -77,11 +71,11 @@ class MyApp extends StatelessWidget {
 
 
   void _handleNotificationAction(BuildContext context, ReceivedAction action) async {
-    // Extraer datos específicos de la notificación
+
     final payload = action.payload ?? {};
     final tipo = payload['tipo'];
 
-    // Obtener el tipo de conductor
+
     final conductorProvider = Provider.of<ConductorProvider>(context, listen: false);
     final conductorId = conductorProvider.conductorId;
     final conductorTipo = conductorId != null

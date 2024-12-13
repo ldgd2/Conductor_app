@@ -94,6 +94,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
 Future<void> _loadRoutes() async { 
   setState(() {
+    _routes = []; // Limpiar rutas antes de cargarlas
   });
 
   try {
@@ -122,16 +123,22 @@ Future<void> _loadRoutes() async {
         }
 
         // Aquí, agrupamos las rutas y los productos
-       List<Map<String, dynamic>> detailedRoutes = []; 
-
+        List<Map<String, dynamic>> detailedRoutes = []; 
 
         for (var group in groupedRoutes.values) {
           List<Map<String, dynamic>> detailsForGroup = [];
           String? fechaRecoleccion;
+          String? estadoRuta;
 
           for (var route in group) {
             final idCargaOferta = int.parse(route['id_carga_oferta'].toString());
-            fechaRecoleccion = route['ruta_oferta']?['fecha_recogida'] ?? 'No disponible'; // Asegurarse que no sea null
+            fechaRecoleccion = route['ruta_oferta']?['fecha_recogida'] ?? 'No disponible';
+            estadoRuta = route['ruta_oferta']?['estado']; // Obtener el estado
+
+            // Solo procesar rutas con estado en_proceso o finalizado
+            if (estadoRuta != 'en_proceso' && estadoRuta != 'finalizado') {
+              continue;
+            }
 
             final detailsResponse = await http.get(Uri.parse("$urlapi/carga_ofertas/$idCargaOferta/detalle"));
             if (detailsResponse.statusCode == 200) {
@@ -146,6 +153,7 @@ Future<void> _loadRoutes() async {
                   'id_cargaoferta': int.parse(idCargaOferta.toString()),
                   'orden': int.parse(route['orden'].toString()),
                   'fecha_recogida': fechaRecoleccion,
+                  'estado': estadoRuta, // Agregar el estado para referencia
                   'nombre': detalleCargaOferta['oferta_detalle']['produccion']['producto']['nombre'],
                   'cantidad': detalleCargaOferta['pesokg'],
                 };
@@ -161,14 +169,15 @@ Future<void> _loadRoutes() async {
           if (detailsForGroup.isNotEmpty) {
             detailedRoutes.add({
               'id_rutaoferta': group.first['id_ruta_oferta'],
-  'fecha_recogida': fechaRecoleccion,
-  'detalles': detailsForGroup,  
+              'fecha_recogida': fechaRecoleccion,
+              'estado': estadoRuta, // Agregar el estado al nivel superior
+              'detalles': detailsForGroup,  
             });
           }
         }
 
         setState(() {
-          _routes = detailedRoutes; // No necesitamos hacer cast aquí.
+          _routes = detailedRoutes; // Actualizar solo las rutas con los estados requeridos
         });
       } else {
         throw Exception("No se encontraron rutas de carga oferta");
@@ -181,9 +190,11 @@ Future<void> _loadRoutes() async {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error al cargar rutas.")));
   } finally {
     setState(() {
+      // Finalizar la carga
     });
   }
 }
+
 
 
 void _showRutaDetailsDialog(BuildContext context, Map<String, dynamic> rutaGroup) {
@@ -289,14 +300,14 @@ Future<bool> confirmarRecogida(int idRutaCargaOferta) async {
 
     if (response.statusCode == 200) {
       print("Recogida confirmada exitosamente");
-      return true; // Indica que la confirmación fue exitosa
+      return true;
     } else {
       print("Error al confirmar la recogida: ${response.statusCode}");
-      return false; // Indica que hubo un error
+      return false; 
     }
   } catch (e) {
     print("Error en la solicitud PUT: $e");
-    return false; // Si ocurre un error en la solicitud
+    return false; 
   }
 }
 
@@ -321,56 +332,41 @@ Future<String> obtenerUbicacionConductor() async {
 
 Future<void> verMapa(BuildContext context, Map<String, dynamic> rutaGroup) async {
   try {
-    List<String> coordenadasRuta = []; // Lista de coordenadas
+    List<String> coordenadasRuta = [];
     String latConductor = '';
     String lonConductor = '';
     
-    // Obtener la id_ruta_oferta de la ruta actual
     final idRutaOferta = rutaGroup['id_rutaoferta'];
-    
-    // Consumir la API para obtener los puntos de la ruta
     final response = await http.get(Uri.parse("$urlapi/ruta_ofertas/$idRutaOferta/puntos-ruta"));
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      
-      // Si existen los puntos de ruta, procesarlos
       if (data['puntos_ruta'] != null) {
-        // Recorrer todos los puntos y agruparlos
         for (var punto in data['puntos_ruta']) {
           if (punto['tipo'] == 'carga') {
-            // Si es un punto de carga, lo añadimos como waypoint
             coordenadasRuta.add('${punto['lat']},${punto['lon']}');
           } else if (punto['tipo'] == 'punto_acopio') {
-            // Si es un punto de acopio, lo almacenamos para usarlo como destino
             latConductor = punto['lat'].toString();
             lonConductor = punto['lon'].toString();
           }
         }
       }
 
-      // Obtener la ubicación actual del conductor
       String ubicacionConductor = await obtenerUbicacionConductor();
       
-      // Generar la URL de Google Maps con la secuencia de puntos
       String rutaUrl = 'https://www.google.com/maps/dir/?api=1';
 
-      // Agregar el punto de origen (ubicación del conductor)
       rutaUrl += '&origin=$ubicacionConductor';
-      
-      // Agregar los puntos intermedios (coordenadas de carga)
+
       for (var punto in coordenadasRuta) {
         rutaUrl += '&waypoints=$punto';
       }
 
-      // Agregar el punto de acopio como destino final
       if (latConductor.isNotEmpty && lonConductor.isNotEmpty) {
         rutaUrl += '&destination=$latConductor,$lonConductor';
       }
 
-      // Mostrar la URL generada para depuración
       print('Ruta de Google Maps: $rutaUrl');
 
-      // Intentar abrir la URL de Google Maps
       if (await canLaunch(rutaUrl)) {
         await launch(rutaUrl);
       } else {
@@ -400,32 +396,26 @@ Future<void> verMapa(BuildContext context, Map<String, dynamic> rutaGroup) async
 
 
    Future<String?> getConductorTipo(int conductorId) async {
-  // Construir la URL
   final url = Uri.parse('$urlapi/conductores/$conductorId');
   debugPrint("URL para obtener detalles del conductor: $url");
 
   try {
-    // Realizar la solicitud GET
     final response = await http.get(url);
 
-    // Verificar el código de estado
     if (response.statusCode == 200) {
-      // Parsear el cuerpo de la respuesta
+
       final Map<String, dynamic> data = jsonDecode(response.body);
 
-      // Retornar el valor del campo 'tipo'
       final tipo = data['tipo'];
       debugPrint("Tipo del conductor obtenido: $tipo");
       return tipo;
     } else {
-      // Manejo de error cuando la respuesta no es 200
       debugPrint("Error al obtener detalles del conductor:");
       debugPrint("Status Code: ${response.statusCode}");
       debugPrint("Response Body: ${response.body}");
       return null;
     }
   } catch (e) {
-    // Manejo de excepciones
     debugPrint("Excepción al obtener detalles del conductor: $e");
     return null;
   }
@@ -443,7 +433,6 @@ Future<void> verMapa(BuildContext context, Map<String, dynamic> rutaGroup) async
     debugPrint("Conductor ID: $conductorId");
 
     try {
-      // Obtener el tipo del conductor
       final tipo = await getConductorTipo(conductorId);
 
       if (tipo == null) {
@@ -454,13 +443,11 @@ Future<void> verMapa(BuildContext context, Map<String, dynamic> rutaGroup) async
 
       debugPrint("Tipo del conductor: $tipo");
 
-      // Actualizar el token del conductor a null
       final response = await _apiService.updateToken2(conductorId, null, tipo);
 
       if (response.statusCode == 200) {
         debugPrint("Token eliminado correctamente del servidor.");
 
-        // Redirigir al usuario a la pantalla de inicio de sesión
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -518,7 +505,7 @@ Future<Map<String, dynamic>> obtenerDetallesRuta(Map<String, dynamic> rutaGroup)
               'cantidad': punto['cantidad'] ?? 0,
               'unidad': punto['unidad'] ?? 'Kg',
               'id_rutaoferta': rutaGroup['id_rutaoferta'],
-              'id_rutacargaoferta': punto['id'], // Extraemos correctamente el ID del punto
+              'id_rutacargaoferta': punto['id'], 
             };
             print("Producto procesado: $producto");
             productos.add(producto);
@@ -556,13 +543,11 @@ Future<void> _navegarARutaScreen(BuildContext context, Map<String, dynamic> ruta
   try {
     final idRutaOferta = rutaGroup['id_rutaoferta'];
 
-    // Llama a la API para obtener el estado
     final response = await http.get(Uri.parse("$urlapi/ruta_ofertas/$idRutaOferta"));
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       final estado = data['estado'];
 
-      // Verificar si la ruta es válida para navegación
       if (estado == 'activo' || estado == 'en_proceso' || estado == 'finalizado') {
         final rutaDetalles = await obtenerDetallesRuta(rutaGroup);
 
@@ -586,7 +571,7 @@ Future<void> _navegarARutaScreen(BuildContext context, Map<String, dynamic> ruta
               productos: productosValidos,
               acopioLocation: rutaDetalles['acopioLocation'],
               idRutaOferta: idRutaOferta,
-              estadoRuta: estado, // Pasar el estado al widget RutaScreen
+              estadoRuta: estado,
             ),
           ),
         );
@@ -618,10 +603,10 @@ Widget build(BuildContext context) {
           return IconButton(
             icon: AnimatedRotation(
               turns: _iconRotation,
-              duration: const Duration(milliseconds: 300), // Tiempo para la animación
+              duration: const Duration(milliseconds: 300), 
               child: const Icon(Icons.menu),
             ),
-            onPressed: () => _toggleDrawer(context), // Abre el drawer al hacer click
+            onPressed: () => _toggleDrawer(context), 
           );
         },
       ),
@@ -642,7 +627,6 @@ Widget build(BuildContext context) {
                 ),
               ),
               SizedBox(height: 8),
-              // Aquí va la sección de "Rutas Disponibles"
               InkWell(
                 onTap: _navigateToPedidosOfertas,
                 child: Container(
@@ -652,10 +636,10 @@ Widget build(BuildContext context) {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start, // Alinear todo a la izquierda
+                    crossAxisAlignment: CrossAxisAlignment.start, 
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween, // Alinea el texto y el ícono en los extremos
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween, 
                         children: [
                           // Texto de Rutas Disponibles
                           Text(
@@ -670,8 +654,7 @@ Widget build(BuildContext context) {
                           Icon(Icons.add_location_alt, color: Colors.red),
                         ],
                       ),
-                      SizedBox(height: 8), // Espaciado entre las dos líneas
-                      // Texto adicional debajo
+                      SizedBox(height: 8), 
                       Text(
                         'Ve y acepta una',
                         style: TextStyle(fontSize: 12),
@@ -683,14 +666,12 @@ Widget build(BuildContext context) {
             ],
           ),
         ),
-        // Aquí está la lista de rutas
         Expanded(
           child: _routes.isEmpty
               ? const Center(child: Text("No hay rutas disponibles"))
               : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start, // Alinea el texto a la izquierda
+                  crossAxisAlignment: CrossAxisAlignment.start, 
                   children: [
-                    // Título "Rutas Aceptadas"
                    const  Padding(
                       padding: EdgeInsets.all(16.0),
                       child: Text(
@@ -698,7 +679,7 @@ Widget build(BuildContext context) {
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.red, // Puedes personalizar el color si lo deseas
+                          color: Colors.red,
                         ),
                       ),
                     ),
@@ -733,10 +714,10 @@ Widget build(BuildContext context) {
     ),
     // Drawer Panel
     drawer: Drawer(
-      backgroundColor: Colors.black.withOpacity(0.7), // Fondo oscuro y transparente
+      backgroundColor: Colors.black.withOpacity(0.7), 
       child: Column(
         children: [
-          const SizedBox(height: 50), // Espaciado para el encabezado del panel
+          const SizedBox(height: 50), 
           ListTile(
             leading: const Icon(Icons.person, color: Colors.red),
             title: const Text(
@@ -745,7 +726,7 @@ Widget build(BuildContext context) {
             ),
             onTap: _navigateToProfile,
           ),
-          const Divider(color: Colors.white), // Línea divisoria
+          const Divider(color: Colors.white), 
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title:const Text(
@@ -760,7 +741,6 @@ Widget build(BuildContext context) {
   );
 }
 
-// Función para redirigir al perfil
 void _navigateToProfile() {
   Navigator.push(
     context,
@@ -768,7 +748,6 @@ void _navigateToProfile() {
   );
 }
 
-// Función para redirigir a la pantalla de pedidos/ofertas
 void _navigateToPedidosOfertas() {
   Navigator.push(
     context,

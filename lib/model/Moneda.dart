@@ -1,7 +1,7 @@
 // lib/model/moneda.dart
 
 class Moneda {
-  final int? id; // El ID es opcional, solo necesario para monedas existentes
+  final int? id; 
   final String nombre;
 
   // Constructor

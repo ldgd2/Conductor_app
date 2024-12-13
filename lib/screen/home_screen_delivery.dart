@@ -23,7 +23,6 @@ class HomeScreenDelivery extends StatefulWidget {
 }
 
 class _HomeScreenDeliveryState extends State<HomeScreenDelivery> with SingleTickerProviderStateMixin {
-    // Asegúrate de tener la URL correcta
   final ApiService _apiService = ApiService();
 
   List<Map<String, dynamic>> _routes = [];
@@ -34,9 +33,8 @@ class _HomeScreenDeliveryState extends State<HomeScreenDelivery> with SingleTick
 
   late AnimationController _animationController;
 
-  double _iconRotation = 0.0; // Ángulo de rotación para el ícono
+  double _iconRotation = 0.0; 
 
-  // Función para abrir/cerrar el panel
 
 
 
@@ -58,9 +56,9 @@ class _HomeScreenDeliveryState extends State<HomeScreenDelivery> with SingleTick
   }
 
   void _toggleDrawer(BuildContext context) {
-    Scaffold.of(context).openDrawer(); // Abre el Drawer
+    Scaffold.of(context).openDrawer(); 
     setState(() {
-      _iconRotation = _iconRotation == 0.0 ? 0.5 : 0.0; // Rota 90 grados al abrir
+      _iconRotation = _iconRotation == 0.0 ? 0.5 : 0.0; 
     });
   }
 
@@ -287,7 +285,6 @@ void _showRutaDetailsDialog(BuildContext context, Map<String, dynamic> rutaGroup
   showDialog(
     context: context,
     builder: (BuildContext context) {
-      // Lista para almacenar los detalles de cada ruta
       List<Map<String, dynamic>> detalles = List<Map<String, dynamic>>.from(rutaGroup['detalles']);
       
       return AlertDialog(
@@ -298,7 +295,6 @@ void _showRutaDetailsDialog(BuildContext context, Map<String, dynamic> rutaGroup
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: detalles.map<Widget>((detalle) {
-                  // Obtener el estado del checkbox (si ya fue confirmado)
                   bool isChecked = detalle['isRecogidaConfirmed'] ?? false;
 
                   return Column(
@@ -313,20 +309,19 @@ void _showRutaDetailsDialog(BuildContext context, Map<String, dynamic> rutaGroup
                         children: [
                           Text('Cantidad: ${detalle['cantidad']}kg'),
                           Checkbox(
-  value: detalle['isRecogidaConfirmed'], // Cargado desde el backend
-  activeColor: Colors.green, // Cambia el color cuando esté marcado
+  value: detalle['isRecogidaConfirmed'],
+  activeColor: Colors.green, 
   onChanged: detalle['isRecogidaConfirmed']
-      ? null // Si ya está marcado como finalizado, no se puede desmarcar
+      ? null 
       : (bool? value) async {
           if (value != null && value) {
-            int idRutaCargaOferta = detalle['id_rutacargaoferta']; // ID del producto seleccionado
+            int idRutaCargaOferta = detalle['id_rutacargaoferta']; 
 
-            // Finalizar solo esta ruta carga oferta
             bool success = await finalizarRecogida(idRutaCargaOferta);
 _loadRoutes();
             if (success) {
               setState(() {
-                detalle['isRecogidaConfirmed'] = true; // Actualizar el estado local
+                detalle['isRecogidaConfirmed'] = true; 
                 _loadRoutes();
               });
             } else {
@@ -361,8 +356,7 @@ _loadRoutes();
           ),
           ElevatedButton(
             onPressed: () {
-              // Llamar a la función verMapa pasando la ruta actual
-              verMapa(context, rutaGroup); // Pasa todo el grupo de rutas (con detalles) a la función
+              verMapa(context, rutaGroup); 
             },
             child: Text('Ver en el mapa'),
           ),
@@ -389,27 +383,24 @@ Future<void> _loadRoutes() async {
       if (data['rutas_carga_ofertas'] != null) {
         final List<Map<String, dynamic>> allRoutes = List<Map<String, dynamic>>.from(data['rutas_carga_ofertas']);
 
-        // Filtrar rutas por estado
         final rutasActivas = allRoutes.where((route) => route['estado'] == "activo").toList();
         final rutasPendientes = allRoutes.where((route) => route['estado'] == "en_proceso").toList();
         final rutasFinalizadas = allRoutes.where((route) => route['estado'] == "finalizado").toList();
 
-        // Aceptar automáticamente las rutas activas
+
         if (rutasActivas.isNotEmpty) {
          List<int> idsRutaCargaOfertaActivas = rutasActivas.map((ruta) => int.parse(ruta['id'].toString())).toList();
           //await aceptarYConfirmarPorGrupo(rutasActivas);
 ;
         }
 
-        // Procesar rutas pendientes
         List<Map<String, dynamic>> pendingRoutes = await _processRoutes(rutasPendientes, false);
 
-        // Procesar rutas finalizadas
         List<Map<String, dynamic>> finalizedRoutes = await _processRoutes(rutasFinalizadas, true);
 
         setState(() {
-          _routes = pendingRoutes; // Rutas pendientes
-          _finalizedRoutes = finalizedRoutes; // Rutas finalizadas
+          _routes = pendingRoutes;
+          _finalizedRoutes = finalizedRoutes; 
         });
       } else {
         throw Exception("No se encontraron rutas de carga oferta");
@@ -429,7 +420,6 @@ Future<List<Map<String, dynamic>>> _processRoutes(
     List<Map<String, dynamic>> routes, bool isFinalized) async {
   Map<int, List<Map<String, dynamic>>> groupedRoutes = {};
 
-  // Agrupar rutas por id_ruta_oferta
   for (var route in routes) {
     final idRutaOferta = int.parse(route['id_ruta_oferta'].toString());
     if (groupedRoutes.containsKey(idRutaOferta)) {
@@ -448,7 +438,6 @@ Future<List<Map<String, dynamic>>> _processRoutes(
       final idCargaOferta = int.parse(route['id_carga_oferta'].toString());
       fechaRecoleccion = route['ruta_oferta']?['fecha_recogida'] ?? 'No disponible';
 
-      // Obtener los detalles de la carga oferta
       final detailsResponse = await http.get(Uri.parse("$urlapi/carga_ofertas/$idCargaOferta/detalle"));
       if (detailsResponse.statusCode == 200) {
         final detailsData = jsonDecode(detailsResponse.body);
@@ -464,7 +453,7 @@ Future<List<Map<String, dynamic>>> _processRoutes(
             'fecha_recogida': fechaRecoleccion,
             'nombre': detalleCargaOferta['oferta_detalle']['produccion']['producto']['nombre'],
             'cantidad': detalleCargaOferta['pesokg'],
-            'isRecogidaConfirmed': isFinalized || route['estado'] == "finalizado", // Activar si está finalizado
+            'isRecogidaConfirmed': isFinalized || route['estado'] == "finalizado",
           };
 
           detailsForGroup.add(detalle);
@@ -476,7 +465,7 @@ Future<List<Map<String, dynamic>>> _processRoutes(
 
     if (detailsForGroup.isNotEmpty) {
       detailedRoutes.add({
-        'id_rutaoferta': group.first['id_ruta_oferta'], // Identificador de la ruta oferta
+        'id_rutaoferta': group.first['id_ruta_oferta'], 
         'fecha_recogida': fechaRecoleccion,
         'detalles': detailsForGroup,
       });
@@ -506,7 +495,6 @@ List<int> obtenerIdsRutaCargaOferta(List<Map<String, dynamic>> rutas) {
 }
 
 Future<void> aceptarYConfirmarPorGrupo(List<Map<String, dynamic>> rutasCargaOferta) async {
-  // Agrupar las rutas carga oferta por id_ruta_oferta
   Map<int, List<int>> rutasPorGrupo = {};
   
   for (var ruta in rutasCargaOferta) {
@@ -519,21 +507,18 @@ Future<void> aceptarYConfirmarPorGrupo(List<Map<String, dynamic>> rutasCargaOfer
     rutasPorGrupo[idRutaOferta]!.add(idRutaCargaOferta);
   }
 
-  // Procesar cada grupo de rutas
   for (var entry in rutasPorGrupo.entries) {
     int idRutaOferta = entry.key;
     List<int> idsRutaCargaOferta = entry.value;
 
     print("Procesando rutas para Ruta Oferta ID: $idRutaOferta con IDs Carga Oferta: $idsRutaCargaOferta");
 
-    // Aceptar la Ruta Oferta completa
     bool aceptada = await aceptarRecogida(idRutaOferta);
     if (!aceptada) {
       debugPrint("Error al aceptar Ruta Oferta ID: $idRutaOferta");
       continue;
     }
 
-    // Confirmar todas las rutas carga oferta asociadas a esta ruta oferta
     for (int idRutaCargaOferta in idsRutaCargaOferta) {
       bool confirmada = await confirmarRecogida(idRutaCargaOferta);
       if (!confirmada) {
@@ -561,7 +546,7 @@ Future<bool> finalizarRecogida(int idRutaCargaOferta) async {
 
   int? conductorId = obteneridconductor();
   final body = jsonEncode({
-    "id_conductor": conductorId, // Solo se envía la ID del conductor
+    "id_conductor": conductorId,
   });
 
   try {
@@ -573,15 +558,15 @@ Future<bool> finalizarRecogida(int idRutaCargaOferta) async {
 
     if (response.statusCode == 200) {
       print("Recogida finalizada exitosamente para la ruta carga oferta $idRutaCargaOferta");
-      return true; // Indica que la finalización fue exitosa
+      return true; 
     } else {
       print("Error al terminar la recogida: ${response.statusCode}");
       print("Respuesta del servidor: ${response.body}");
-      return false; // Indica que hubo un error
+      return false; 
     }
   } catch (e) {
     print("Error en la solicitud PUT: $e");
-    return false; // Si ocurre un error en la solicitud
+    return false; 
   }
 }
 
@@ -597,16 +582,14 @@ List<int> obtenerIdsRutaCargaOfertaDeRutaGroup(Map<String, dynamic> rutaGroup) {
 
 Future<void> aceptarYConfirmarTodasRutasCargaOferta(List<int> idsRutaCargaOferta) async {
   for (int id in idsRutaCargaOferta) {
-    // Paso 1: Aceptar la ruta
     bool aceptada = await aceptarRecogida(id);
     if (!aceptada) {
       debugPrint("Error al aceptar recogida para ID: $id");
-      continue; // Si no se acepta, no intentamos confirmar
+      continue; 
     } else {
       debugPrint("Recogida aceptada para ID: $id");
     }
 
-    // Paso 2: Confirmar la recogida
     bool confirmada = await confirmarRecogida(id);
     if (!confirmada) {
       debugPrint("Error al confirmar recogida para ID: $id");
@@ -617,7 +600,7 @@ Future<void> aceptarYConfirmarTodasRutasCargaOferta(List<int> idsRutaCargaOferta
 }
 
 Future<bool> aceptarRecogida(int idRutaOferta) async {
-  final url = "$urlapi/ruta_ofertas/$idRutaOferta/aceptar"; // Cambia la URL a ruta_ofertas
+  final url = "$urlapi/ruta_ofertas/$idRutaOferta/aceptar"; 
 
   int? conductorId = obteneridconductor();
   if (conductorId == null) {
@@ -681,15 +664,15 @@ print("servicio para confirmar: $url");
 
     if (response.statusCode == 200) {
       print("Recogida confirmada exitosamente");
-      return true; // Indica que la confirmación fue exitosa
+      return true; 
     } else {
       print("Error al confirmar la recogida: ${response.statusCode}");
       print("Respuesta del servidor: ${response.body}");
-      return false; // Indica que hubo un error
+      return false; 
     }
   } catch (e) {
     print("Error en la solicitud PUT para confirmar: $e");
-    return false; // Si ocurre un error en la solicitud
+    return false; 
   }
 }
 
@@ -711,7 +694,7 @@ Future<String> obtenerUbicacionConductor() async {
 
 Future<void> verMapa(BuildContext context, Map<String, dynamic> rutaGroup) async {
   try {
-    List<String> coordenadasRuta = []; // Lista de coordenadas
+    List<String> coordenadasRuta = []; 
     String latConductor = '';
     String lonConductor = '';
     
@@ -879,7 +862,7 @@ Widget build(BuildContext context) {
                   ),
                 ),
                 ListView.builder(
-                  shrinkWrap: true, // Para evitar scroll dentro del ListView padre
+                  shrinkWrap: true, 
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: _routes.length,
                   itemBuilder: (context, index) {
@@ -965,7 +948,6 @@ Widget build(BuildContext context) {
 }
 
 
-// Función para redirigir al perfil
 void _navigateToProfile() {
   Navigator.push(
     context,
@@ -973,7 +955,6 @@ void _navigateToProfile() {
   );
 }
 
-// Función para redirigir a la pantalla de pedidos/ofertas
 void _navigateToPedidosOfertas() {
   Navigator.push(
     context,

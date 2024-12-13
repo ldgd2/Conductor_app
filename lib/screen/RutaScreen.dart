@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:conductor_app/config/config.dart';
+import 'package:conductor_app/screen/home_screen.dart';
+import 'package:conductor_app/screen/home_screen_delivery.dart';
 import 'package:conductor_app/services/ConductorProvider.dart';
+import 'package:conductor_app/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
@@ -35,10 +38,12 @@ class _RutaScreenState extends State<RutaScreen> {
   List<bool> _recogidaStatus = [];
   bool rutaAceptada = false; 
 late StreamSubscription<Position> _positionStream;
+bool _isLoadingRecogidaStatus = true;
 
 @override
 void initState() {
   super.initState();
+    _initializeRecogidaStatus();
   _filtrarRutas();
   _initializeLocationUpdates();
    rutaAceptada = widget.estadoRuta == 'en_proceso' || widget.estadoRuta == 'finalizado';
@@ -59,7 +64,14 @@ void initState() {
   void dispose() {
     _positionStream.cancel();
     super.dispose();
+    _initializeRecogidaStatus(); 
   }
+
+  @override
+void didChangeDependencies() {
+  super.didChangeDependencies();
+  _initializeRecogidaStatus(); 
+}
 
   // # # # Funcion para obtener id carga ruta oferta # # #
   Future<List<int>> filtrarIdRutaCargaOfertaPorRutaOferta(int idRutaOferta) async {
@@ -91,6 +103,10 @@ void initState() {
 }
 
 Future<void> _initializeRecogidaStatus() async {
+  setState(() {
+    _isLoadingRecogidaStatus = true;
+  });
+
   final url = "$urlapi/ruta_ofertas/${widget.idRutaOferta}";
   try {
     final response = await http.get(Uri.parse(url));
@@ -104,17 +120,26 @@ Future<void> _initializeRecogidaStatus() async {
             (item) => item['id'] == producto['id_rutacargaoferta'],
             orElse: () => null,
           );
-          // Activar el checkbox si el estado es "finalizado"
-          return matchingItem?['carga_oferta']?['estado'] == 'finalizado';
+          // Verifica si el estado es 'finalizado' y activa el checkbox
+          return matchingItem != null && matchingItem['carga_oferta']['estado'] == 'finalizado';
         }).toList();
+        _isLoadingRecogidaStatus = false;
       });
     } else {
-      print("Error al obtener el estado de los productos: ${response.statusCode}");
+      throw Exception("Error al obtener datos de la ruta: ${response.statusCode}");
     }
   } catch (e) {
-    print("Error al inicializar el estado de los checkboxes: $e");
+    print("Error en _initializeRecogidaStatus: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Error al cargar estado de productos")),
+    );
+    setState(() {
+      _isLoadingRecogidaStatus = false;
+    });
   }
 }
+
+
 
 
 // # # # funciones para Aceptar,Confirmar Ruta # # #
@@ -223,28 +248,45 @@ Future<void> _checkRutaAceptada() async {
   }
 }
 
-  Future<bool> confirmarRecogida(int idRutaCargaOferta) async {
-    final url = "$urlapi/ruta_carga_ofertas/$idRutaCargaOferta/confirmar-recogida";
-    int? conductorId = obteneridconductor();
-    final body = jsonEncode({
-      "id_conductor": conductorId,
-    });
-    try {
-      final response = await http.put(
-        Uri.parse(url),
-        headers: {'Content-Type': 'application/json'},
-        body: body,
-      );
+Future<bool> confirmarRecogida(int idRutaCargaOferta) async {
+  final url = "$urlapi/ruta_carga_ofertas/$idRutaCargaOferta/confirmar-recogida";
+  int? conductorId = obteneridconductor();
 
-      if (response.statusCode == 200) {
-        return true;
-      } else {
-        return false;
-      }
-    } catch (e) {
+  if (conductorId == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Error: ID de conductor no encontrado")),
+    );
+    return false;
+  }
+
+  final body = jsonEncode({"id_conductor": conductorId});
+  try {
+    final response = await http.put(
+      Uri.parse(url),
+      headers: {'Content-Type': 'application/json'},
+      body: body,
+    );
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Recogida confirmada exitosamente")),
+      );
+      return true;
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Error al confirmar la recogida")),
+      );
       return false;
     }
+  } catch (e) {
+    print("Error en confirmarRecogida: $e");
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Error en la solicitud al confirmar recogida")),
+    );
+    return false;
   }
+}
+
 
 
 // # # # Funciones para el conductor (provider, ubicacion) # # #
@@ -252,6 +294,75 @@ int? obteneridconductor(){
   final conductorProvider = Provider.of<ConductorProvider>(context, listen: false);
     final conductorId = conductorProvider.conductorId;
   return conductorId;
+}
+
+Future<String?> getConductorTipo(int conductorId) async {
+  // Construir la URL
+  final url = Uri.parse('$urlapi/conductores/$conductorId');
+  debugPrint("URL para obtener detalles del conductor: $url");
+
+  try {
+    // Realizar la solicitud GET
+    final response = await http.get(url);
+
+    // Verificar el código de estado
+    if (response.statusCode == 200) {
+      // Parsear el cuerpo de la respuesta
+      final Map<String, dynamic> data = jsonDecode(response.body);
+
+      // Retornar el valor del campo 'tipo'
+      final tipo = data['tipo'];
+      debugPrint("Tipo del conductor obtenido: $tipo");
+      return tipo;
+    } else {
+      // Manejo de error cuando la respuesta no es 200
+      debugPrint("Error al obtener detalles del conductor:");
+      debugPrint("Status Code: ${response.statusCode}");
+      debugPrint("Response Body: ${response.body}");
+      return null;
+    }
+  } catch (e) {
+    // Manejo de excepciones
+    debugPrint("Excepción al obtener detalles del conductor: $e");
+    return null;
+  }
+}
+
+Future<void> verificarTipoConductor() async {
+  try {
+    final conductorProvider = Provider.of<ConductorProvider>(context, listen: false);
+    final conductorId = conductorProvider.conductorId;
+
+    if (conductorId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("ID de conductor no encontrado")),
+      );
+      return;
+    }
+
+    // Llamar a la API para obtener el tipo de conductor
+    final tipo = await getConductorTipo(conductorId);
+
+    if (tipo == "recogo") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+      );
+    } else if (tipo == "delivery") {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomeScreenDelivery()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Tipo de conductor no reconocido")),
+      );
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Error al verificar tipo de conductor: $e")),
+    );
+  } 
 }
 
 // Mover cámara y animar marcador de manera fluida
@@ -517,15 +628,22 @@ Widget build(BuildContext context) {
   Widget _buildRutaNoAceptada() {
     return Stack(
       children: [
-        GoogleMap(
-          initialCameraPosition: CameraPosition(
-            target: _routePoints.isNotEmpty ? _routePoints.first : LatLng(0, 0),
-            zoom: 12,
-          ),
-          markers: Set<Marker>.of(_markers.values),
-          polylines: Set<Polyline>.of(_polylines.values),
-          onMapCreated: (controller) => _mapController = controller,
-        ),
+       GoogleMap(
+  initialCameraPosition: CameraPosition(
+    target: _routePoints.isNotEmpty ? _routePoints.first : LatLng(0, 0),
+    zoom: 12,
+  ),
+  markers: Set<Marker>.of(_markers.values),
+  polylines: Set<Polyline>.of(_polylines.values),
+  onMapCreated: (controller) {
+    setState(() {
+      _mapController = controller;
+    });
+    // Llama a _generateRoute aquí si es necesario
+    _generateRoute();
+  },
+),
+
         Align(
           alignment: Alignment.bottomCenter,
           child: Container(
@@ -564,80 +682,88 @@ ElevatedButton(
 Widget _buildRutaAceptada() {
   return Stack(
     children: [
-      GoogleMap(
-        initialCameraPosition: CameraPosition(
-          target: _routePoints.isNotEmpty ? _routePoints.first : LatLng(0, 0),
-          zoom: 12,
-        ),
-        markers: Set<Marker>.of(_markers.values),
-        polylines: Set<Polyline>.of(_polylines.values),
-        onMapCreated: (controller) => _mapController = controller,
-      ),
+     GoogleMap(
+  initialCameraPosition: CameraPosition(
+    target: _routePoints.isNotEmpty ? _routePoints.first : LatLng(0, 0),
+    zoom: 12,
+  ),
+  markers: Set<Marker>.of(_markers.values),
+  polylines: Set<Polyline>.of(_polylines.values),
+  onMapCreated: (controller) {
+    setState(() {
+      _mapController = controller;
+    });
+    // Llama a _generateRoute aquí si es necesario
+    _generateRoute();
+  },
+),
+
       Align(
         alignment: Alignment.bottomCenter,
         child: Container(
           color: Colors.black.withOpacity(0.8),
           padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Usamos un ListView limitado en altura
-              SizedBox(
-                height: 150, // Altura limitada similar a _buildRutaNoAceptada
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: widget.productos.length,
-                  itemBuilder: (context, index) {
-                    final producto = widget.productos[index];
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Validar que el nombre del producto no sea nulo
-                        Text(
-                          "${producto['nombre'] ?? 'Producto desconocido'} (${producto['cantidad']} ${producto['unidad'] ?? ''})",
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        Checkbox(
-                          value: _recogidaStatus[index],
-                          activeColor: Colors.green,
-                          onChanged: (bool? value) async {
-                            if (!_recogidaStatus[index] && value == true) {
-                              final success = await confirmarRecogida(
-                                producto['id_rutacargaoferta'], // Pasamos la ID correcta
-                              );
-                              if (success) {
-                                setState(() {
-                                  _recogidaStatus[index] = true; // Actualiza el estado
-                                });
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text("Error al confirmar la recogida")),
-                                );
-                              }
-                            }
-                          },
-                        ),
-                      ],
-                    );
-                  },
+          child: _isLoadingRecogidaStatus
+              ? const Center(
+                  child: CircularProgressIndicator(),
+                )
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      height: 150,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: widget.productos.length,
+                        itemBuilder: (context, index) {
+                          final producto = widget.productos[index];
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                 "${producto['producto']} (${producto['cantidad']} ${producto['unidad']})",
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              Checkbox(
+  value: _recogidaStatus[index],
+  activeColor: Colors.green,
+  onChanged: (bool? value) async {
+    if (!_recogidaStatus[index] && value == true) {
+      // Llama a confirmarRecogida y actualiza el estado solo si tiene éxito
+      final success = await confirmarRecogida(producto['id_rutacargaoferta']);
+      if (success) {
+        setState(() {
+          _recogidaStatus[index] = true;
+        });
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("El producto ya está recogido o no puede confirmarse")),
+      );
+    }
+  },
+),
+
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: verificarTipoConductor, // Llama a la función para verificar y redirigir
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      child: _isLoadingRecogidaStatus
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text("Volver", style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Ruta finalizada")),
-                  );
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text("Finalizar", style: TextStyle(color: Colors.white)),
-              ),
-            ],
-          ),
         ),
       ),
     ],
   );
 }
+
 
 }

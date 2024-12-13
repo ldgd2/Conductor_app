@@ -31,10 +31,10 @@ class RutaCargaOferta {
     idCargaOferta: json['id_carga_oferta'],
     idRutaOferta: json['id_ruta_oferta'], 
     idTransporte: json['id_transporte'],
-    estadoConductor: json['estado_conductor'] ?? "pendiente", // Valor por defecto
-    orden: json['orden'] ?? 0, // Valor por defecto
-    cantidad: int.tryParse(json['cantidad'].toString()) ?? 0, // Convertir cantidad a entero
-    estado: json['estado'] ?? "pendiente", // Valor por defecto
+    estadoConductor: json['estado_conductor'] ?? "pendiente", 
+    orden: json['orden'] ?? 0, 
+    cantidad: int.tryParse(json['cantidad'].toString()) ?? 0, 
+    estado: json['estado'] ?? "pendiente", 
     distancia: _parseDistancia(json['distancia']),
     rutaOferta: RutaOferta.fromJson(json['ruta_oferta']),
   );

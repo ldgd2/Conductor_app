@@ -93,9 +93,9 @@ Future<void> _loadRoutes() async {
         final List<Map<String, dynamic>> allRoutes = List<Map<String, dynamic>>.from(data['rutas_carga_ofertas']);
         print("All Routes: $allRoutes");
 
-        // Filtrar rutas con estado "activo"
+       
         final List<Map<String, dynamic>> activeRoutes = allRoutes.where((route) {
-          return route['estado'] == 'activo'; // Filtramos por estado "activo"
+          return route['estado'] == 'activo'; 
         }).toList();
 
         print("Filtered Active Routes: $activeRoutes");
@@ -113,17 +113,15 @@ Future<void> _loadRoutes() async {
           }
         }
 
-        // Aquí, agrupamos las rutas y los productos
+        // agrupamos las rutas y los productos
         List<Map<String, dynamic>> detailedRoutes = []; 
 
         for (var group in groupedRoutes.values) {
           List<Map<String, dynamic>> detailsForGroup = [];
-          String? fechaRecogida; // Inicializamos la variable
+          String? fechaRecogida; 
 
           for (var route in group) {
             final idCargaOferta = int.parse(route['id_carga_oferta'].toString());
-
-            // Asegurándonos de que 'fecha_recogida' sea accesible correctamente
             fechaRecogida = route['ruta_oferta'] != null 
                 ? route['ruta_oferta']['fecha_recogida']?.toString() ?? 'No disponible'
                 : 'No disponible';
@@ -137,7 +135,7 @@ Future<void> _loadRoutes() async {
 
                 final Map<String, dynamic> detalle = {
  'id_rutacargaoferta': int.parse(route['id'].toString()),
-  'id_cargaoferta': int.parse(route['id_carga_oferta'].toString()), // Mantener id_cargaoferta
+  'id_cargaoferta': int.parse(route['id_carga_oferta'].toString()),
   'id_rutaoferta': int.parse(route['id_ruta_oferta'].toString()),
   'orden': int.parse(route['orden'].toString()),
   'fecha_recogida': fechaRecogida,
@@ -154,8 +152,6 @@ Future<void> _loadRoutes() async {
               debugPrint("Error al obtener detalles de carga oferta: ${detailsResponse.statusCode}");
             }
           }
-
-          // Agregar el grupo completo de detalles
     if (detailsForGroup.isNotEmpty) {
   final totalCantidad = detailsForGroup.fold<double>(
     0,
@@ -165,7 +161,7 @@ Future<void> _loadRoutes() async {
   detailedRoutes.add({
     'id_rutaoferta': group.first['id_ruta_oferta'],
     'fecha_recogida': fechaRecogida,
-    'total_cantidad': totalCantidad, // Calcula la cantidad total aquí
+    'total_cantidad': totalCantidad, 
     'detalles': detailsForGroup,
   });
 }
@@ -173,7 +169,7 @@ Future<void> _loadRoutes() async {
         print("Detalles de rutas: $detailedRoutes");
 
         setState(() {
-          _routes = detailedRoutes; // No necesitamos hacer cast aquí.
+          _routes = detailedRoutes; 
         });
       } else {
         throw Exception("No se encontraron rutas de carga oferta");
@@ -195,7 +191,6 @@ void _showRutaDetailsDialog(BuildContext context, Map<String, dynamic> rutaGroup
   showDialog(
     context: context,
     builder: (BuildContext context) {
-      // Lista para almacenar los detalles de cada ruta
       List<Map<String, dynamic>> detalles = List<Map<String, dynamic>>.from(rutaGroup['detalles']);
       
       return AlertDialog(
@@ -206,9 +201,6 @@ void _showRutaDetailsDialog(BuildContext context, Map<String, dynamic> rutaGroup
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: detalles.map<Widget>((detalle) {
-                  // Obtener el estado del checkbox (si ya fue confirmado)
-            
-
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -241,8 +233,7 @@ void _showRutaDetailsDialog(BuildContext context, Map<String, dynamic> rutaGroup
           ),
           ElevatedButton(
             onPressed: () {
-              // Llamar a la función verMapa pasando la ruta actual
-              verMapa(context, rutaGroup); // Pasa todo el grupo de rutas (con detalles) a la función
+              verMapa(context, rutaGroup); 
             },
             child: Text('Ver en el mapa'),
           ),
@@ -263,7 +254,7 @@ Future<bool> AceptarRuta(List<int> idsRutaCargaOferta) async {
     return false;
   }
 
-  bool allSuccess = true; // Para rastrear si todas las rutas fueron aceptadas correctamente
+  bool allSuccess = true;
 
   for (int idRutaCargaOferta in idsRutaCargaOferta) {
     final url = "$urlapi/ruta_carga_ofertas/$idRutaCargaOferta/aceptar";
@@ -302,7 +293,7 @@ Future<bool> CancelarRuta(List<int> idsRutaCargaOferta) async {
     return false;
   }
 
-  bool allSuccess = true; // Para rastrear si todas las rutas fueron aceptadas correctamente
+  bool allSuccess = true; 
 
     final url = "$urlapi/ruta_carga_ofertas/$idsRutaCargaOferta/cancelar";
     final body = jsonEncode({
@@ -350,43 +341,30 @@ Future<String> obtenerUbicacionConductor() async {
 
 Future<void> verMapa(BuildContext context, Map<String, dynamic> rutaGroup) async {
   try {
-    List<String> coordenadasRuta = []; // Lista de coordenadas
+    List<String> coordenadasRuta = []; 
     String latConductor = '';
     String lonConductor = '';
-    
-    // Obtener la id_ruta_oferta de la ruta actual
     final idRutaOferta = rutaGroup['id_rutaoferta'];
-    
-    // Consumir la API para obtener los puntos de la ruta
     final response = await http.get(Uri.parse("$urlapi/ruta_ofertas/$idRutaOferta/puntos-ruta"));
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      
-      // Si existen los puntos de ruta, procesarlos
       if (data['puntos_ruta'] != null) {
-        // Recorrer todos los puntos y agruparlos
         for (var punto in data['puntos_ruta']) {
           if (punto['tipo'] == 'carga') {
-            // Si es un punto de carga, lo añadimos como waypoint
             coordenadasRuta.add('${punto['lat']},${punto['lon']}');
           } else if (punto['tipo'] == 'punto_acopio') {
-            // Si es un punto de acopio, lo almacenamos para usarlo como destino
             latConductor = punto['lat'].toString();
             lonConductor = punto['lon'].toString();
           }
         }
       }
 
-      // Obtener la ubicación actual del conductor
       String ubicacionConductor = await obtenerUbicacionConductor();
       
-      // Generar la URL de Google Maps con la secuencia de puntos
       String rutaUrl = 'https://www.google.com/maps/dir/?api=1';
 
-      // Agregar el punto de origen (ubicación del conductor)
       rutaUrl += '&origin=$ubicacionConductor';
       
-      // Agregar los puntos intermedios (coordenadas de carga)
       for (var punto in coordenadasRuta) {
         rutaUrl += '&waypoints=$punto';
       }

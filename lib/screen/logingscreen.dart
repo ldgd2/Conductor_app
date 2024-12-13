@@ -56,14 +56,13 @@ Future<String?> getConductorTipo(int conductorId) async {
       debugPrint("Tipo del conductor obtenido: $tipo");
       return tipo;
     } else {
-      // Manejo de error cuando la respuesta no es 200
+  
       debugPrint("Error al obtener detalles del conductor:");
       debugPrint("Status Code: ${response.statusCode}");
       debugPrint("Response Body: ${response.body}");
       return null;
     }
   } catch (e) {
-    // Manejo de excepciones
     debugPrint("Excepción al obtener detalles del conductor: $e");
     return null;
   }

@@ -1,7 +1,7 @@
 // lib/model/oferta_detalle.dart
 
 class OfertaDetalle {
-  final int? id; // El ID es opcional, solo necesario para detalles de oferta existentes
+  final int? id;
   final int idProduccion;
   final int idOferta;
   final int idUnidadMedida;
